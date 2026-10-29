@@ -1,0 +1,24 @@
+# Decisions
+
+- 2026-10-29 D001: Use the unmodified attached v5.0 guide at `docs/edgepulse_spec_v5.md` with the user's amendments; the user approved this because v4 is absent. Do not relabel v5 as v4.
+- 2026-10-29 D002: Use DataStore and datastore-tink 1.3.0 despite the October 21 release; the user explicitly approved this sole exception to the 14-day cooling period.
+- 2026-10-29 D003: Pin CameraX 1.6.1 as explicitly requested, although repository metadata also lists 1.6.2 as age-eligible.
+- 2026-10-29 D004: Construction eligibility is YOLOX-Tiny p95 <= 40 ms; <= 35 ms at 5 FPS remains a Tier C target, per Amendment 5 overriding v5's 35 ms gate.
+- 2026-10-29 D005: No monitoring, cloud credentials, endpoint, model latency, device encryption, or field accuracy is claimed without direct evidence; unavailable inputs block their dependent acceptance checks.
+- 2026-10-29 D006: Use domain-separated, length-prefixed canonical audit bytes with explicit record kind and all integrity-relevant fields; the guide's unframed concatenation is ambiguous and omits gap fields.
+- 2026-10-29 D007: Unattested offline enrollment uses no attestation challenge and claims no hardware attestation; attestation requires an externally supplied verifier nonce and separately validated certificate chain.
+- 2026-10-29 D008: Only an outgoing P-256 key may authorize a rotation in this build; supervisor-key recovery requires a separately enrolled external trust anchor and is deferred rather than trusting a new self-declared supervisor.
+- 2026-10-29 D009: Keep mathematical and audit verification code in a pure Kotlin JVM module; Android Keystore, storage and SAF adapters remain in the app module.
+- 2026-10-29 D010: Support Gemini, OpenRouter and NVIDIA NIM, as requested; all validation endpoints and the NVIDIA model ID are user-entered and encrypted, with no built-in runtime API URLs.
+- 2026-10-29 D011: Provider validation uses the same explicit Confirm & Upload gate as future cloud analysis; NVIDIA uses a user-approved one-token text completion because a public model list does not establish inference authorization. No images are uploaded during key setup.
+- 2026-10-29 D012: Exclude LiteRT's unused alpha-only Play AI delivery dependency; use bundled models and the standalone Environment/CompiledModel path to honor stable-only/offline requirements. Vendor NPU libraries remain device-dependent.
+- 2026-10-29 D013: Use a decimal 200,000,000-byte archive quota and reserve bounded staging space before encoding; a persisted FIFO ordinal preserves ordering across reboot-induced elapsed-clock resets.
+- 2026-10-29 D014: Use the supplied repository owner's verified GitHub handle and no-reply identity for repository-local commits; the CLI is authenticated as that owner. Keep phase completion separate from progress commits.
+- 2026-10-29 D015: SQLCipher retains a private ByteArray copy until Room closes because pooled WAL readers need it; zero the caller's opening buffer immediately and the driver-owned buffer after closing all connections. Clearing both after the first open caused a reproduced pooled-read failure.
+- 2026-10-29 D016: Use official upstream YOLOX COCO pretrained weights and a real COCO calibration subset for baseline benchmark exports, as explicitly selected by the user. These baseline assets do not establish field accuracy or replace real-data training/quantization.
+- 2026-10-29 D017: Use 100 deterministic real COCO val2017 calibration images, with per-image SHA-256 and official ZIP CRC/ETag checks; do not substitute random tensors for calibration. Conversion completed and its provenance is bundled; field accuracy remains unverified.
+- 2026-10-29 D018: Re-index YOLOX's four-parity Focus slicing plus convolution into an equivalent strided convolution for export; ONNX2TF otherwise misinterprets its channel layout. Border/parity equivalence tests and whole-model FP32 parity must pass before producing baseline derivatives.
+- 2026-10-29 D019: Export the three 4D raw YOLOX heads before a shape-checked NHWC flatten/concatenate bridge; direct flattened ONNX output had a converter layout error, while the bridge passes FP32 parity.
+- 2026-10-29 D020: Restrict audit/identity/benchmark SAF exports to the Android local external-storage provider; cloud-backed document providers could otherwise transmit data during monitoring without upload consent.
+- 2026-10-29 D021: Despite the DailyCheckpointExporter class name, schedule checkpoints every four hours per v5 §4.2, with best-effort WorkManager timing; session-end calls belong to Phase 2's stop workflow.
+- 2026-10-29 D022: Always encode the audit envelope version and exercise the actual Python CLI on JVM wire bundles; omitting Kotlin's default-valued version made otherwise valid exported chains unreadable by the strict verifier.

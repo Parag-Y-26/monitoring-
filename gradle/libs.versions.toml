@@ -1,0 +1,74 @@
+# Verified against Google Maven / Maven Central on 2026-10-29.
+# Evidence and rejected newer releases: docs/dependency-resolution.json.
+# DataStore 1.3.0: user-approved exception to the 14-day cooling period.
+# CameraX 1.6.1: explicit user pin, ahead of the general latest-stable rule.
+[versions]
+agp = "9.4.1"
+kotlin = "2.4.21"
+ksp = "2.3.12"
+coroutines = "1.11.0"
+serialization = "1.11.0"
+compose-bom = "2026.09.00"
+activity = "1.13.0"
+core = "1.19.1"
+camera = "1.6.1"
+litert = "2.3.0"
+arcore = "1.56.0"
+room = "2.8.5"
+sqlcipher = "4.19.1"
+tink = "1.23.0"
+datastore = "1.3.0"
+lifecycle = "2.11.0"
+work = "2.12.0"
+okhttp = "5.5.0"
+hilt = "2.60.1"
+junit = "4.13.2"
+androidx-test = "1.7.0"
+androidx-junit = "1.3.0"
+protobufRuntime = "4.36.2"
+protobuf-plugin = "0.10.0"
+jacoco = "0.8.15"
+
+[libraries]
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-foundation = { module = "androidx.compose.foundation:foundation" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+androidx-core = { module = "androidx.core:core-ktx", version.ref = "core" }
+camera-core = { module = "androidx.camera:camera-core", version.ref = "camera" }
+camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camera" }
+camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camera" }
+litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
+litert-gpu = { module = "com.google.ai.edge.litert:litert-gpu", version.ref = "litert" }
+arcore = { module = "com.google.ar:core", version.ref = "arcore" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+sqlcipher = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher" }
+tink = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
+datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
+datastore-tink = { module = "androidx.datastore:datastore-tink", version.ref = "datastore" }
+lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
+lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test" }
+androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-junit" }
+protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobufRuntime" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }

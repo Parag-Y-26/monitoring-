@@ -1,0 +1,86 @@
+{
+  "upstream_commit": "6ddff4824372906469a7fae2dc3206c7aa4bbaee",
+  "weight_sources": [
+    {
+      "model": "YOLOX_TINY",
+      "name": "yolox_tiny.pth",
+      "sha256": "9de513de589ac98bb92d3bca53b5af7b9acfa9b0bacb831f7999d0f7afaee8f0",
+      "bytes": 40755013
+    },
+    {
+      "model": "YOLOX_NANO",
+      "name": "yolox_nano.pth",
+      "sha256": "cd28f55fbbc1829f99d9ac9b38a16d259a22889739c8728ea877610201feff7b",
+      "bytes": 7694953
+    }
+  ],
+  "conversion_command": "tools/modelprep/Run-ModelPrep.ps1",
+  "calibration_manifest_sha256": "5be63118580ca3acce8d8765ec0b24ff5607491d4c494cd73b04afb3986cc6c7",
+  "license_reviewed_by": "Codex: upstream Apache-2.0 repository and official release sources",
+  "input_contract": "NHWC BGR float32 [0,255], centered 320x320 letterbox, padding 114; INT8 uses exported scale/zero-point",
+  "output_contract": "COCO 80-class raw YOLOX head; decode_in_inference=false; not a trained cement-bag detector",
+  "accuracy_evaluated": false,
+  "physical_benchmark": "HUMAN-GATED",
+  "metrics": {
+    "yolox-tiny_FP32": {
+      "max_abs_error": 3.600120544433594e-05,
+      "rmse": 6.401914447451418e-07,
+      "output_shape": [
+        1,
+        2100,
+        85
+      ],
+      "accuracy_evaluated": false
+    },
+    "yolox-tiny_FP16": {
+      "max_abs_error": 0.02584215998649597,
+      "rmse": 0.0005010412423871458,
+      "output_shape": [
+        1,
+        2100,
+        85
+      ],
+      "accuracy_evaluated": false
+    },
+    "yolox-tiny_INT8": {
+      "max_abs_error": 2.433584690093994,
+      "rmse": 0.04659067466855049,
+      "output_shape": [
+        1,
+        2100,
+        85
+      ],
+      "accuracy_evaluated": false
+    },
+    "yolox-nano_FP32": {
+      "max_abs_error": 0.0001971721649169922,
+      "rmse": 2.141903678420931e-06,
+      "output_shape": [
+        1,
+        2100,
+        85
+      ],
+      "accuracy_evaluated": false
+    },
+    "yolox-nano_FP16": {
+      "max_abs_error": 0.22672277688980103,
+      "rmse": 0.0026073059998452663,
+      "output_shape": [
+        1,
+        2100,
+        85
+      ],
+      "accuracy_evaluated": false
+    },
+    "yolox-nano_INT8": {
+      "max_abs_error": 2.771045684814453,
+      "rmse": 0.13912221789360046,
+      "output_shape": [
+        1,
+        2100,
+        85
+      ],
+      "accuracy_evaluated": false
+    }
+  }
+}

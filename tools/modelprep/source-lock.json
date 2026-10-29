@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "as_of": "2026-10-29",
+  "yolox_repository": "https://github.com/Megvii-BaseDetection/YOLOX.git",
+  "yolox_commit": "6ddff4824372906469a7fae2dc3206c7aa4bbaee",
+  "release": "0.1.1rc0",
+  "weight_license": "Apache-2.0",
+  "checksum_evidence": "SHA-256 computed after downloading the official upstream release assets over TLS; not a separately published upstream checksum",
+  "weights": [
+    {
+      "model": "YOLOX_TINY",
+      "name": "yolox_tiny.pth",
+      "sha256": "9de513de589ac98bb92d3bca53b5af7b9acfa9b0bacb831f7999d0f7afaee8f0",
+      "bytes": 40755013
+    },
+    {
+      "model": "YOLOX_NANO",
+      "name": "yolox_nano.pth",
+      "sha256": "cd28f55fbbc1829f99d9ac9b38a16d259a22889739c8728ea877610201feff7b",
+      "bytes": 7694953
+    }
+  ],
+  "coco_archive": "https://s3.amazonaws.com/images.cocodataset.org/zips/val2017.zip",
+  "coco_archive_bytes": 815585330,
+  "coco_archive_etag": "\"d366be60d3dc737327160d62453e3973-98\"",
+  "calibration_samples": 100,
+  "calibration_seed": 20261029,
+  "python_image": "python@sha256:1aaa65a85fda306ffb8b910824d4e93bdce61e212c7e87168123ea3073b41a1a",
+  "python_image_tag_evidence": "3.12.14-slim-bookworm, linux/amd64, pushed 2026-09-19T02:08:19.369428407Z; selected to satisfy ONNX2TF Python >=3.12 and the cooling period"
+}

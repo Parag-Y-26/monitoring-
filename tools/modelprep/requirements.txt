@@ -1,0 +1,8 @@
+# Stable converter compatibility set; Android runtime versions remain in the Gradle catalog.
+onnx2tf[tensorflow,torch]==2.6.9
+torchvision==0.26.0
+loguru==0.7.3
+tabulate==0.10.0
+pillow==12.3.0
+pycocotools==2.0.11
+thop==0.1.1.post2209072238

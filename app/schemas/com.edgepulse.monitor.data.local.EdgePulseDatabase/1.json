@@ -1,0 +1,795 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "5e7c7d326b9ecca69d4470f180f5eaee",
+    "entities": [
+      {
+        "tableName": "garden_maps",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`map_id` TEXT NOT NULL, `name` TEXT NOT NULL, `has_arcore_planes` INTEGER NOT NULL, `accuracy_tier` TEXT NOT NULL, `origin_plaque_id` TEXT, `created_at_wall` INTEGER NOT NULL, PRIMARY KEY(`map_id`))",
+        "fields": [
+          {
+            "fieldPath": "map_id",
+            "columnName": "map_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "has_arcore_planes",
+            "columnName": "has_arcore_planes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "accuracy_tier",
+            "columnName": "accuracy_tier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "origin_plaque_id",
+            "columnName": "origin_plaque_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "created_at_wall",
+            "columnName": "created_at_wall",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "map_id"
+          ]
+        }
+      },
+      {
+        "tableName": "plant_nodes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`node_id` TEXT NOT NULL, `map_id` TEXT NOT NULL, `detected_class` TEXT NOT NULL, `species_label` TEXT, `world_x_meters` REAL NOT NULL, `world_z_meters` REAL NOT NULL, `cov_xx` REAL NOT NULL, `cov_xz` REAL NOT NULL, `cov_zz` REAL NOT NULL, `close_sightings_count` INTEGER NOT NULL, `latest_enc_webp_path` TEXT, `cloud_health_markdown` TEXT, `updated_at_wall` INTEGER NOT NULL, PRIMARY KEY(`node_id`), FOREIGN KEY(`map_id`) REFERENCES `garden_maps`(`map_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "node_id",
+            "columnName": "node_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "map_id",
+            "columnName": "map_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detected_class",
+            "columnName": "detected_class",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "species_label",
+            "columnName": "species_label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "world_x_meters",
+            "columnName": "world_x_meters",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "world_z_meters",
+            "columnName": "world_z_meters",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cov_xx",
+            "columnName": "cov_xx",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cov_xz",
+            "columnName": "cov_xz",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cov_zz",
+            "columnName": "cov_zz",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "close_sightings_count",
+            "columnName": "close_sightings_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latest_enc_webp_path",
+            "columnName": "latest_enc_webp_path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cloud_health_markdown",
+            "columnName": "cloud_health_markdown",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updated_at_wall",
+            "columnName": "updated_at_wall",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "node_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_plant_nodes_map_id",
+            "unique": false,
+            "columnNames": [
+              "map_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_plant_nodes_map_id` ON `${TABLE_NAME}` (`map_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "garden_maps",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "map_id"
+            ],
+            "referencedColumns": [
+              "map_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "plant_observations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`obs_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `node_id` TEXT NOT NULL, `session_id` TEXT NOT NULL, `enc_webp_path` TEXT, `webp_purged` INTEGER NOT NULL, `obs_x_meters` REAL NOT NULL, `obs_z_meters` REAL NOT NULL, `distance_d_meters` REAL NOT NULL, `captured_wall_ms` INTEGER NOT NULL, FOREIGN KEY(`node_id`) REFERENCES `plant_nodes`(`node_id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`session_id`) REFERENCES `monitoring_sessions`(`session_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "obs_id",
+            "columnName": "obs_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "node_id",
+            "columnName": "node_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "session_id",
+            "columnName": "session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enc_webp_path",
+            "columnName": "enc_webp_path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "webp_purged",
+            "columnName": "webp_purged",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "obs_x_meters",
+            "columnName": "obs_x_meters",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "obs_z_meters",
+            "columnName": "obs_z_meters",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "distance_d_meters",
+            "columnName": "distance_d_meters",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "captured_wall_ms",
+            "columnName": "captured_wall_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "obs_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_plant_observations_node_id",
+            "unique": false,
+            "columnNames": [
+              "node_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_plant_observations_node_id` ON `${TABLE_NAME}` (`node_id`)"
+          },
+          {
+            "name": "index_plant_observations_session_id",
+            "unique": false,
+            "columnNames": [
+              "session_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_plant_observations_session_id` ON `${TABLE_NAME}` (`session_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "plant_nodes",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "node_id"
+            ],
+            "referencedColumns": [
+              "node_id"
+            ]
+          },
+          {
+            "table": "monitoring_sessions",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "session_id"
+            ],
+            "referencedColumns": [
+              "session_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "monitoring_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`session_id` TEXT NOT NULL, `mode` TEXT NOT NULL, `is_session_active` INTEGER NOT NULL, `last_heartbeat_elapsed_ms` INTEGER NOT NULL, `last_heartbeat_wall_ms` INTEGER NOT NULL, `boot_id` TEXT NOT NULL, `active_burst_duty_cycle_pct` REAL NOT NULL, `background_freeze_events` INTEGER NOT NULL, `gate_ax` REAL, `gate_ay` REAL, `gate_bx` REAL, `gate_by` REAL, `out_normal_x` REAL, `out_normal_y` REAL, `align_method` TEXT, `align_rot_rad` REAL NOT NULL, `align_tx_m` REAL NOT NULL, `align_tz_m` REAL NOT NULL, `align_sigma_m` REAL NOT NULL, `total_out_count` INTEGER NOT NULL, `total_in_count` INTEGER NOT NULL, `pubkey_spki_b64` TEXT NOT NULL, `attestation_cert_pem` TEXT NOT NULL, `attestation_nonce_mode` TEXT NOT NULL, `key_continuity_status` TEXT NOT NULL, `last_checkpoint_sig` TEXT, `authorized_rotation_records_json` TEXT NOT NULL, `started_elapsed_ms` INTEGER NOT NULL, `started_wall_ms` INTEGER NOT NULL, `ended_wall_ms` INTEGER, `cloud_audit_report` TEXT, PRIMARY KEY(`session_id`))",
+        "fields": [
+          {
+            "fieldPath": "session_id",
+            "columnName": "session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mode",
+            "columnName": "mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "is_session_active",
+            "columnName": "is_session_active",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "last_heartbeat_elapsed_ms",
+            "columnName": "last_heartbeat_elapsed_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "last_heartbeat_wall_ms",
+            "columnName": "last_heartbeat_wall_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "boot_id",
+            "columnName": "boot_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "active_burst_duty_cycle_pct",
+            "columnName": "active_burst_duty_cycle_pct",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "background_freeze_events",
+            "columnName": "background_freeze_events",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gate_ax",
+            "columnName": "gate_ax",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "gate_ay",
+            "columnName": "gate_ay",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "gate_bx",
+            "columnName": "gate_bx",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "gate_by",
+            "columnName": "gate_by",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "out_normal_x",
+            "columnName": "out_normal_x",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "out_normal_y",
+            "columnName": "out_normal_y",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "align_method",
+            "columnName": "align_method",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "align_rot_rad",
+            "columnName": "align_rot_rad",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "align_tx_m",
+            "columnName": "align_tx_m",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "align_tz_m",
+            "columnName": "align_tz_m",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "align_sigma_m",
+            "columnName": "align_sigma_m",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "total_out_count",
+            "columnName": "total_out_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "total_in_count",
+            "columnName": "total_in_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pubkey_spki_b64",
+            "columnName": "pubkey_spki_b64",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attestation_cert_pem",
+            "columnName": "attestation_cert_pem",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attestation_nonce_mode",
+            "columnName": "attestation_nonce_mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "key_continuity_status",
+            "columnName": "key_continuity_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "last_checkpoint_sig",
+            "columnName": "last_checkpoint_sig",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "authorized_rotation_records_json",
+            "columnName": "authorized_rotation_records_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "started_elapsed_ms",
+            "columnName": "started_elapsed_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "started_wall_ms",
+            "columnName": "started_wall_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ended_wall_ms",
+            "columnName": "ended_wall_ms",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "cloud_audit_report",
+            "columnName": "cloud_audit_report",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "session_id"
+          ]
+        }
+      },
+      {
+        "tableName": "inventory_events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`event_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `session_id` TEXT NOT NULL, `track_id` INTEGER NOT NULL, `direction` TEXT NOT NULL, `bag_weight` INTEGER NOT NULL, `running_out_total` INTEGER NOT NULL, `enc_webp_path` TEXT NOT NULL, `webp_purged` INTEGER NOT NULL, `webp_sha256` TEXT NOT NULL, `monotonic_elapsed_ms` INTEGER NOT NULL, `wall_clock_ms` INTEGER NOT NULL, `prev_chain_hash` TEXT NOT NULL, `chain_hash` TEXT NOT NULL, `ecdsa_sig_b64` TEXT NOT NULL, `audit_sequence` INTEGER NOT NULL, `audit_record_json` TEXT NOT NULL, FOREIGN KEY(`session_id`) REFERENCES `monitoring_sessions`(`session_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "event_id",
+            "columnName": "event_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "session_id",
+            "columnName": "session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "track_id",
+            "columnName": "track_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "direction",
+            "columnName": "direction",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bag_weight",
+            "columnName": "bag_weight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "running_out_total",
+            "columnName": "running_out_total",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enc_webp_path",
+            "columnName": "enc_webp_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "webp_purged",
+            "columnName": "webp_purged",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "webp_sha256",
+            "columnName": "webp_sha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "monotonic_elapsed_ms",
+            "columnName": "monotonic_elapsed_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wall_clock_ms",
+            "columnName": "wall_clock_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prev_chain_hash",
+            "columnName": "prev_chain_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chain_hash",
+            "columnName": "chain_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ecdsa_sig_b64",
+            "columnName": "ecdsa_sig_b64",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "audit_sequence",
+            "columnName": "audit_sequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "audit_record_json",
+            "columnName": "audit_record_json",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "event_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_inventory_events_session_id",
+            "unique": false,
+            "columnNames": [
+              "session_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_inventory_events_session_id` ON `${TABLE_NAME}` (`session_id`)"
+          },
+          {
+            "name": "index_inventory_events_audit_sequence",
+            "unique": true,
+            "columnNames": [
+              "audit_sequence"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_inventory_events_audit_sequence` ON `${TABLE_NAME}` (`audit_sequence`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "monitoring_sessions",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "session_id"
+            ],
+            "referencedColumns": [
+              "session_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "monitoring_gaps",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`gap_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `session_id` TEXT NOT NULL, `gap_start_elapsed_ms` INTEGER NOT NULL, `gap_end_elapsed_ms` INTEGER NOT NULL, `gap_start_wall_ms` INTEGER NOT NULL, `reason` TEXT NOT NULL, `prev_chain_hash` TEXT NOT NULL, `chain_hash` TEXT NOT NULL, `ecdsa_sig_b64` TEXT NOT NULL, `audit_sequence` INTEGER NOT NULL, `audit_record_json` TEXT NOT NULL, FOREIGN KEY(`session_id`) REFERENCES `monitoring_sessions`(`session_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "gap_id",
+            "columnName": "gap_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "session_id",
+            "columnName": "session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gap_start_elapsed_ms",
+            "columnName": "gap_start_elapsed_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gap_end_elapsed_ms",
+            "columnName": "gap_end_elapsed_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gap_start_wall_ms",
+            "columnName": "gap_start_wall_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reason",
+            "columnName": "reason",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prev_chain_hash",
+            "columnName": "prev_chain_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chain_hash",
+            "columnName": "chain_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ecdsa_sig_b64",
+            "columnName": "ecdsa_sig_b64",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "audit_sequence",
+            "columnName": "audit_sequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "audit_record_json",
+            "columnName": "audit_record_json",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "gap_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_monitoring_gaps_session_id",
+            "unique": false,
+            "columnNames": [
+              "session_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_monitoring_gaps_session_id` ON `${TABLE_NAME}` (`session_id`)"
+          },
+          {
+            "name": "index_monitoring_gaps_audit_sequence",
+            "unique": true,
+            "columnNames": [
+              "audit_sequence"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_monitoring_gaps_audit_sequence` ON `${TABLE_NAME}` (`audit_sequence`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "monitoring_sessions",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "session_id"
+            ],
+            "referencedColumns": [
+              "session_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "archive_index",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`enc_webp_path` TEXT NOT NULL, `byte_size` INTEGER NOT NULL, `created_elapsed_ms` INTEGER NOT NULL, `fifo_order` INTEGER NOT NULL, `source_table` TEXT NOT NULL, `source_row_id` INTEGER NOT NULL, `is_purged` INTEGER NOT NULL, PRIMARY KEY(`enc_webp_path`))",
+        "fields": [
+          {
+            "fieldPath": "enc_webp_path",
+            "columnName": "enc_webp_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "byte_size",
+            "columnName": "byte_size",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "created_elapsed_ms",
+            "columnName": "created_elapsed_ms",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fifo_order",
+            "columnName": "fifo_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source_table",
+            "columnName": "source_table",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source_row_id",
+            "columnName": "source_row_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "is_purged",
+            "columnName": "is_purged",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "enc_webp_path"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_archive_index_fifo_order",
+            "unique": false,
+            "columnNames": [
+              "fifo_order"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_archive_index_fifo_order` ON `${TABLE_NAME}` (`fifo_order`)"
+          },
+          {
+            "name": "index_archive_index_is_purged_fifo_order",
+            "unique": false,
+            "columnNames": [
+              "is_purged",
+              "fifo_order"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_archive_index_is_purged_fifo_order` ON `${TABLE_NAME}` (`is_purged`, `fifo_order`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5e7c7d326b9ecca69d4470f180f5eaee')"
+    ]
+  }
+}

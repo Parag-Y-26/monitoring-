@@ -1,0 +1,26 @@
+{
+  "source": "https://s3.amazonaws.com/images.cocodataset.org/zips/val2017.zip",
+  "purpose": "Offline detector regression examples only; no field accuracy claim. Test APK assets only.",
+  "images": [
+    {
+      "file": "000000573626.jpg",
+      "sha256": "71ec645db592393c36812f60f8d1744f2f473679bd3d2d86eeb2c3f732bf7f28",
+      "archive_entry": "val2017/000000573626.jpg"
+    },
+    {
+      "file": "000000513283.jpg",
+      "sha256": "91725f1fcd58873d1ded35bcbca2de0c4dbc11188c3a8795a81b1d928b942b9d",
+      "archive_entry": "val2017/000000513283.jpg"
+    },
+    {
+      "file": "000000269113.jpg",
+      "sha256": "5cae45e13f5cda50f16266e773aaad6115965d518fd5e4bff4c40bc24126fcd4",
+      "archive_entry": "val2017/000000269113.jpg"
+    },
+    {
+      "file": "000000081061.jpg",
+      "sha256": "d609877d71bb235a132923cb287d90f3d0d0cf3299f01dc4b6b8b660240e1544",
+      "archive_entry": "val2017/000000081061.jpg"
+    }
+  ]
+}

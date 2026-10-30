@@ -3,6 +3,8 @@ package com.edgepulse.monitor.ui
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -40,17 +42,21 @@ fun EdgeAppShell(destination: EdgeDestination, onDestination: (EdgeDestination) 
 @Composable
 fun EdgeNavigation(destination: EdgeDestination, onDestination: (EdgeDestination) -> Unit) {
     val motion = LocalEdgeMotion.current
+    val primary = if (destination == EdgeDestination.USAGE) EdgeDestination.SETTINGS else destination
     Surface {
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().selectableGroup()) {
-            EdgeDestination.entries.forEach { item ->
-                val selected = item == destination
+        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp,vertical = 8.dp).selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(EdgeDestination.MONITOR,EdgeDestination.ITEMS,EdgeDestination.SETTINGS).forEach { item ->
+                val interaction = remember { MutableInteractionSource() }
+                val selected = item == primary
+                val background by animateColorAsState(if (selected) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f) else MaterialTheme.colorScheme.surface,
+                    tween(motion.duration(EdgeMotion.FastMs)),label = "Destination highlight")
                 val color by animateColorAsState(if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     tween(motion.duration(EdgeMotion.FastMs)), label = "Destination color")
-                Column(Modifier.weight(1f).heightIn(min = 72.dp)
-                    .selectable(selected, role = Role.Tab, onClick = { onDestination(item) })
-                    .padding(vertical = 16.dp, horizontal = 2.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.width(32.dp).height(4.dp).background(if (selected) color else MaterialTheme.colorScheme.surface, RoundedCornerShape(2.dp)))
+                Box(Modifier.weight(1f).heightIn(min = 52.dp)
+                    .edgePressFeedback(interaction).background(background,RoundedCornerShape(14.dp))
+                    .selectable(selected, interactionSource = interaction,indication = LocalIndication.current,role = Role.Tab, onClick = { onDestination(item) })
+                    .padding(vertical = 12.dp, horizontal = 4.dp), contentAlignment = Alignment.Center) {
                     Text(item.title, style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1)
                 }
             }
@@ -60,12 +66,17 @@ fun EdgeNavigation(destination: EdgeDestination, onDestination: (EdgeDestination
 
 @Composable
 fun TargetSelector(name: String, enabled: Boolean, onClick: () -> Unit) {
-    Surface(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp)) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("MONITORING TARGET", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(name, style = MaterialTheme.typography.titleMedium)
-            Text(if (enabled) "Change item  →" else "Stop to change item", style = MaterialTheme.typography.labelMedium)
+    val interaction = remember { MutableInteractionSource() }
+    Surface(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(16.dp),
+        interactionSource = interaction,color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .25f),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp).edgePressFeedback(interaction,enabled)) {
+        Row(Modifier.padding(16.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(Modifier.weight(1f),verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Monitoring item", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(name, style = MaterialTheme.typography.titleMedium)
+                if (!enabled) Text("Stop to change item", style = MaterialTheme.typography.bodySmall)
+            }
+            Text("›",style = MaterialTheme.typography.titleLarge,color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -39,7 +39,7 @@ data class CloudResponse(val statusCode: Int, val body: String)
 data class ModelDiscovery(val models: List<CloudModel>, val keyAuthenticated: Boolean)
 class CatalogException(val status: KeyValidationStatus) : IllegalStateException(status.name)
 
-/** Discovers metadata only; no hardcoded model list and no inference-based capability guesses. */
+/** Discovers returned IDs only. Gemini's documented multimodal family supplies missing modality metadata. */
 object ModelDirectory {
     suspend fun load(provider: CloudProvider, fetch: suspend (String) -> CloudResponse): ModelDiscovery {
         try {
@@ -74,6 +74,8 @@ object ModelDirectory {
                         ?.takeIf { it.isNotBlank() }?.filterNot { it.isISOControl() }?.take(160) ?: id
                     val modalities = value["architecture"]?.jsonObject?.get("input_modalities")?.jsonArray
                     val images = modalities?.any { it.jsonPrimitive.content == "image" }
+                        ?: if (provider == CloudProvider.GEMINI) id.startsWith("models/gemini-") &&
+                            !id.contains("tts") && !id.contains("embedding") else null
                     val context = value[if (provider == CloudProvider.GEMINI) "inputTokenLimit" else "context_length"]
                         ?.jsonPrimitive?.longOrNull?.takeIf { it > 0 }
                     models.putIfAbsent(id, CloudModel(id, label, images, context))
@@ -90,5 +92,7 @@ object ModelDirectory {
     }
 
     fun initialSelection(models: List<CloudModel>, saved: String?): String? =
-        models.firstOrNull { it.id == saved }?.id ?: models.firstOrNull { it.supportsImages == true }?.id ?: models.firstOrNull()?.id
+        models.firstOrNull { it.id == saved }?.id ?:
+            models.firstOrNull { it.supportsImages == true && it.id.contains("flash", ignoreCase = true) }?.id ?:
+            models.firstOrNull { it.supportsImages == true }?.id ?: models.firstOrNull()?.id
 }

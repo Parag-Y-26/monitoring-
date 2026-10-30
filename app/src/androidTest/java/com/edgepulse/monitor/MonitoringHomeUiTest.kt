@@ -34,7 +34,7 @@ class MonitoringHomeUiTest {
                 { stops++; monitor = MonitoringState() }, {})
         } }
         compose.onNodeWithText("Start monitoring").assertIsEnabled().performClick()
-        compose.onNodeWithText("Stop monitoring").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Stop monitoring").assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(1, starts); assertEquals(1, stops) }
         compose.onNodeWithText("What the count means").performScrollTo().assertIsDisplayed()
     }

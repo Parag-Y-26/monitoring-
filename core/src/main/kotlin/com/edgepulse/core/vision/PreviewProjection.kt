@@ -1,6 +1,14 @@
 package com.edgepulse.core.vision
 
 import kotlin.math.max
+import kotlin.math.min
+
+/** Baseline in canvas pixels; NaN means chrome leaves no readable caption area. */
+fun previewCaptionBaseline(preferred: Float, textHeight: Float, viewHeight: Float, reservedTop: Float, reservedBottom: Float): Float {
+    val minimum = max(textHeight+4f, reservedTop+textHeight+8f)
+    val maximum = min(viewHeight-8f, reservedBottom-8f)
+    return if (maximum < minimum) Float.NaN else preferred.coerceIn(minimum, maximum)
+}
 
 /** Reusable normalized upright-image projection matching PreviewView.FILL_CENTER. */
 class PreviewProjection {

@@ -16,6 +16,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import com.edgepulse.monitor.security.LocalSafFolder
@@ -50,7 +52,9 @@ class MainActivity : ComponentActivity() {
             val labels = remember(state.selectedTarget?.name) { trainedLabels + (state.selectedTarget?.name ?: "Reference item") }
             var destinationName by rememberSaveable { mutableStateOf(EdgeDestination.MONITOR.name) }
             val destination = EdgeDestination.valueOf(destinationName)
-            BackHandler(enabled = destination != EdgeDestination.MONITOR) { destinationName = EdgeDestination.MONITOR.name }
+            BackHandler(enabled = destination != EdgeDestination.MONITOR) {
+                destinationName = if (destination == EdgeDestination.USAGE) EdgeDestination.SETTINGS.name else EdgeDestination.MONITOR.name
+            }
             EdgePulseTheme {
                 DisposableEffect(monitor.active || monitor.starting) {
                     if (monitor.active || monitor.starting) enableEdgeToEdge(
@@ -58,11 +62,27 @@ class MainActivity : ComponentActivity() {
                         navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
                     onDispose { enableEdgeToEdge() }
                 }
-                val cameraPhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview(), itemModel::acceptCameraPhoto)
+                val captureFile = remember { File(cacheDir, "camera-capture/pending.jpg") }
+                val cameraPreview = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview(), itemModel::acceptCameraPhoto)
+                val cameraPhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { captured ->
+                    if (captured) {
+                        val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", captureFile)
+                        itemModel.loadPhoto(uri) { captureFile.delete() }
+                    } else captureFile.delete()
+                }
+                val takePhoto = {
+                    try {
+                        check(captureFile.parentFile!!.isDirectory || captureFile.parentFile!!.mkdirs())
+                        cameraPhoto.launch(FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", captureFile))
+                    } catch (_: Exception) {
+                        captureFile.delete()
+                        try { cameraPreview.launch(null) }
+                        catch (_: Exception) { itemModel.showMessage("Camera app is unavailable. Choose an image instead.") }
+                    }
+                }
                 val photoPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                     if (granted) {
-                        try { cameraPhoto.launch(null) }
-                        catch (_: Exception) { itemModel.showMessage("Camera app is unavailable. Choose an image instead.") }
+                        takePhoto()
                     } else itemModel.showMessage("Allow camera access to take a reference photo, or choose an existing image.")
                 }
                 val imagePhoto = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> if (uri != null) itemModel.loadPhoto(uri) }
@@ -90,12 +110,11 @@ class MainActivity : ComponentActivity() {
                     onExportAudit = model::exportAudit, onExportBenchmark = model::exportBenchmark,
                     onCancel = model::cancel, onMessageDismiss = model::clearMessage,
                     onUsage = { destinationName = EdgeDestination.USAGE.name }, embedded = true)
-                else if (destination == EdgeDestination.USAGE) ApiUsageScreen(items.usage, { destinationName = EdgeDestination.MONITOR.name }, embedded = true)
+                else if (destination == EdgeDestination.USAGE) ApiUsageScreen(items.usage, { destinationName = EdgeDestination.SETTINGS.name }, embedded = true)
                 else if (destination == EdgeDestination.ITEMS) ItemSetupScreen(items, itemModel, trainedLabels, { destinationName = EdgeDestination.MONITOR.name },
                     onCamera = { if (!items.monitoring) {
                         if (ContextCompat.checkSelfPermission(this@MainActivity,Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                            try { cameraPhoto.launch(null) }
-                            catch (_: Exception) { itemModel.showMessage("Camera app is unavailable. Choose an image instead.") }
+                            takePhoto()
                         } else photoPermission.launch(Manifest.permission.CAMERA)
                     } }, onPhoto = { if (!items.monitoring) imagePhoto.launch("image/*") },
                     onSettings = { destinationName = EdgeDestination.SETTINGS.name }, embedded = true)
@@ -104,7 +123,7 @@ class MainActivity : ComponentActivity() {
                     else permissions.launch(if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.CAMERA, Manifest.permission.POST_NOTIFICATIONS) else arrayOf(Manifest.permission.CAMERA))
                 }, onStop = stopMonitoring,
                     onSurface = monitoringRuntime::attachSurface, overlay = monitoringRuntime.overlay, labels = labels, onRescan = monitoringRuntime::requestRescan,
-                    onItems = { destinationName = EdgeDestination.ITEMS.name }, onUsage = { destinationName = EdgeDestination.USAGE.name })
+                    onItems = { destinationName = EdgeDestination.ITEMS.name })
                 }
             }
         }

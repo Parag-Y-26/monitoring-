@@ -20,19 +20,25 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import com.edgepulse.monitor.monitoring.DetectionOverlay
 import com.edgepulse.monitor.monitoring.MonitoringState
 import com.edgepulse.core.vision.PreviewProjection
+import com.edgepulse.core.vision.previewCaptionBaseline
 import com.edgepulse.monitor.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MonitoringScreen(setup: SetupUiState, monitor: MonitoringState, onSettings: () -> Unit,
     onStart: () -> Unit, onStop: () -> Unit, onSurface: (Preview.SurfaceProvider?) -> Unit,
-    overlay: DetectionOverlay? = null, labels: List<String> = emptyList(), onRescan: () -> Unit = {}, onItems: () -> Unit = {}, onUsage: () -> Unit = {}) {
+    overlay: DetectionOverlay? = null, labels: List<String> = emptyList(), onRescan: () -> Unit = {}, onItems: () -> Unit = {}) {
     val interrupted = setup.activeSessionId != null && !monitor.active && !monitor.starting
     val ready = setup.storageReady && setup.cloudReady && setup.deviceReady && setup.folderName != null && !setup.identityMismatch
     var explanation by remember { mutableStateOf(false) }
@@ -41,17 +47,11 @@ fun MonitoringScreen(setup: SetupUiState, monitor: MonitoringState, onSettings: 
         LiveMonitoringView(setup.selectedTarget?.name ?: "All objects", monitor, onStop, onSurface, overlay, labels, onRescan, onSettings)
         return
     }
-    Scaffold(topBar = { TopAppBar(title = { Column {
-        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-        Text("LOCAL MONITORING", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    } }) }, bottomBar = {
+    Scaffold(topBar = { EdgePageHeader(stringResource(R.string.app_name),"On-device monitoring") }, bottomBar = {
         Surface {
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-                if (interrupted) Button(onClick = onStop, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                    Text("Close interrupted session")
-                } else Button(onClick = onStart, enabled = ready && !monitor.starting, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                    Text(if (monitor.starting) "Starting camera…" else "Start monitoring")
-                }
+                if (interrupted) EdgePrimaryButton("Close interrupted session",onStop)
+                else EdgePrimaryButton(if (monitor.starting) "Starting camera…" else "Start monitoring",onStart,ready && !monitor.starting)
             }
         }
     }) { insets ->
@@ -68,7 +68,7 @@ fun MonitoringScreen(setup: SetupUiState, monitor: MonitoringState, onSettings: 
                     !setup.deviceReady -> "Run the device check in Settings; construction requires 40 ms or faster."
                     else -> "Choose a local report folder in Settings."
                 }, style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = onSettings) { Text("Finish setup  →") }
+                EdgeTextAction("Finish setup",onSettings)
             }
             monitor.error?.let { error -> item { Text(error, style = MaterialTheme.typography.bodyMedium) } }
             setup.message?.let { message -> item { Text(message, style = MaterialTheme.typography.bodyMedium) } }
@@ -82,10 +82,9 @@ fun MonitoringScreen(setup: SetupUiState, monitor: MonitoringState, onSettings: 
             }
             item { Text("On-device detection · No video saved", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             item {
-                TextButton(onClick = { explanation = !explanation }) { Text("What the count means") }
+                EdgeTextAction("What the count means",{ explanation = !explanation })
                 if (explanation) Text("Counts show confirmed visible detections, not a cumulative stock total. Reference matching is experimental and sensitive to viewpoint, scale and background. Label scores are not calibrated probabilities.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = onUsage) { Text("API purpose & usage  →") }
             }
         }
     }
@@ -95,6 +94,8 @@ fun MonitoringScreen(setup: SetupUiState, monitor: MonitoringState, onSettings: 
 private fun LiveMonitoringView(target: String, monitor: MonitoringState, onStop: () -> Unit,
     onSurface: (Preview.SurfaceProvider?) -> Unit, overlay: DetectionOverlay?, labels: List<String>, onRescan: () -> Unit, onSettings: () -> Unit) {
     var more by remember { mutableStateOf(false) }
+    var reservedTop by remember { mutableFloatStateOf(0f) }
+    var reservedBottom by remember { mutableFloatStateOf(Float.POSITIVE_INFINITY) }
     Box(Modifier.fillMaxSize().background(EdgePalette.Ink).testTag("live-monitor")) {
         if (!monitor.paused && !monitor.starting) {
             AndroidView(factory = { context -> PreviewView(context).apply {
@@ -102,11 +103,12 @@ private fun LiveMonitoringView(target: String, monitor: MonitoringState, onStop:
                 scaleType = PreviewView.ScaleType.FILL_CENTER
                 onSurface(surfaceProvider)
             } }, modifier = Modifier.fillMaxSize())
-            if (overlay != null) LiveLabels(overlay, labels)
         }
         Box(Modifier.fillMaxWidth().height(180.dp).background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .65f), Color.Transparent))))
+        if (!monitor.paused && !monitor.starting && overlay != null) LiveLabels(overlay, labels, reservedTop, reservedBottom)
         Surface(color = EdgePalette.Ink.copy(alpha = .86f), contentColor = EdgePalette.Paper, shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp).widthIn(max = 440.dp)) {
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp).widthIn(max = 440.dp)
+                .onGloballyPositioned { reservedTop = it.boundsInParent().bottom }) {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(when { monitor.starting -> "Starting camera…"; monitor.paused -> "Camera paused"; monitor.burst -> "LIVE · ${monitor.visibleItems} detected";
                     else -> "WATCH · ${monitor.visibleItems} last detected" }, style = MaterialTheme.typography.titleSmall)
@@ -116,11 +118,16 @@ private fun LiveMonitoringView(target: String, monitor: MonitoringState, onStop:
         if (monitor.paused || monitor.error != null) Text(monitor.error ?: "Cooling down", color = EdgePalette.Paper,
             modifier = Modifier.align(Alignment.Center).padding(24.dp), style = MaterialTheme.typography.titleMedium)
         Surface(color = EdgePalette.Ink.copy(alpha = .94f), contentColor = EdgePalette.Paper, shape = RoundedCornerShape(30.dp),
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp).widthIn(max = 520.dp)) {
-            FlowRow(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Button(onClick = onStop, colors = ButtonDefaults.buttonColors(containerColor = EdgePalette.Paper, contentColor = EdgePalette.Ink), modifier = Modifier.heightIn(min = 48.dp)) { Text("Stop monitoring") }
-                TextButton(onClick = onRescan, enabled = !monitor.paused && !monitor.starting, colors = ButtonDefaults.textButtonColors(contentColor = EdgePalette.Paper)) { Text("Rescan") }
-                TextButton(onClick = { more = true }, colors = ButtonDefaults.textButtonColors(contentColor = EdgePalette.Paper)) { Text("More") }
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp).widthIn(max = 520.dp)
+                .onGloballyPositioned { reservedBottom = it.boundsInParent().top }) {
+            Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EdgePrimaryButton("Stop",onStop,
+                    colors = ButtonDefaults.buttonColors(containerColor = EdgePalette.Paper, contentColor = EdgePalette.Ink),
+                    modifier = Modifier.weight(1f).semantics { contentDescription = "Stop monitoring" })
+                EdgeTextAction("Rescan",onRescan,enabled = !monitor.paused && !monitor.starting,
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),colors = ButtonDefaults.textButtonColors(contentColor = EdgePalette.Paper))
+                EdgeTextAction("More",{ more = true },modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = EdgePalette.Paper))
             }
         }
     }
@@ -129,6 +136,8 @@ private fun LiveMonitoringView(target: String, monitor: MonitoringState, onStop:
             Text("%.1f ms · %.1f FPS".format(monitor.inferenceMs, monitor.fps))
             Text("Burst duty %.1f%% · 30 s freezes: ${monitor.freezes}".format(monitor.duty))
             Text("${monitor.frames} frames · pre-roll ${monitor.preRollFrames}")
+            Text("Signed crossings: ${monitor.outCrossings} OUT · ${monitor.inCrossings} IN")
+            Text("Center gate: downward is OUT, upward is IN. One crossing per tracked object; validate counts on site.", style = MaterialTheme.typography.bodySmall)
             Text("Confirmed detections, not stock totals. Scores are not calibrated probabilities.", style = MaterialTheme.typography.bodySmall)
         }
     }, confirmButton = { TextButton(onClick = { more = false }) { Text("Close") } },
@@ -136,7 +145,7 @@ private fun LiveMonitoringView(target: String, monitor: MonitoringState, onStop:
 }
 
 @Composable
-private fun LiveLabels(overlay: DetectionOverlay, labels: List<String>) {
+private fun LiveLabels(overlay: DetectionOverlay, labels: List<String>, reservedTop: Float, reservedBottom: Float) {
     val fontSize = with(LocalDensity.current) { 11.sp.toPx() }
     val paint = remember(fontSize) { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = fontSize } }
     val captions = remember(labels) { Array(81) { category -> Array(101) { score -> "${labels.getOrNull(category)?.take(28) ?: "Object"} · ${score / 100f}" } } }
@@ -147,6 +156,8 @@ private fun LiveLabels(overlay: DetectionOverlay, labels: List<String>) {
             projection.configure(overlay.uprightWidth, overlay.uprightHeight, size.width, size.height)
             val canvas = drawContext.canvas.nativeCanvas
             val saved = canvas.save(); canvas.clipRect(0f, 0f, size.width, size.height)
+            drawLine(Color.White.copy(alpha = .7f), Offset(projection.x(.2f),projection.y(.5f)),
+                Offset(projection.x(.8f),projection.y(.5f)),strokeWidth = 2.dp.toPx())
             for (i in 0 until overlay.size) {
                 val x = projection.x(overlay.left[i]); val y = projection.y(overlay.top[i])
                 val w = projection.x(overlay.right[i])-x; val h = projection.y(overlay.bottom[i])-y
@@ -156,7 +167,8 @@ private fun LiveLabels(overlay: DetectionOverlay, labels: List<String>) {
                 val caption = captions[overlay.classes[i].coerceIn(0, 80)][(overlay.scores[i]*100).toInt().coerceIn(0, 100)]
                 val textWidth = paint.measureText(caption)
                 val tx = x.coerceAtMost(size.width-textWidth-8).coerceAtLeast(0f)
-                val ty = (y-4.dp.toPx()).coerceIn(fontSize+4, maxOf(fontSize+4, size.height-8))
+                val ty = previewCaptionBaseline(y-4.dp.toPx(), fontSize, size.height, reservedTop, reservedBottom)
+                if (ty.isNaN()) continue
                 drawRect(Color.Black, Offset(tx, ty-fontSize-4), Size(textWidth+8, fontSize+8))
                 canvas.drawText(caption, tx+4, ty, paint)
             }

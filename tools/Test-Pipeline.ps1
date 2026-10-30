@@ -32,11 +32,23 @@ function Read-JUnit([System.IO.FileInfo[]]$Reports) {
     if ($skipped -gt 0) { throw "Incomplete test execution: $skipped skipped tests." }
     return @{ tests = $total; skipped = $skipped }
 }
+function Source-Evidence {
+    $paths = git ls-files --cached --others --exclude-standard -- app/src core/src tools tests gradle app/build.gradle.kts core/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties app/gradle.lockfile
+    $inputs = @($paths | Sort-Object -Unique | ForEach-Object {
+        if (Test-Path -LiteralPath $_ -PathType Leaf) { [ordered]@{ path = $_; sha256 = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant() } }
+    })
+    $bytes = [Text.Encoding]::UTF8.GetBytes(($inputs | ConvertTo-Json -Depth 3 -Compress))
+    $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()
+    return @{ sha256 = $digest; inputs = $inputs }
+}
 
 Push-Location $repoRoot
 try {
     $result.commit = (git rev-parse HEAD).Trim()
     $result.worktree_dirty = [bool](git status --porcelain)
+    $source = Source-Evidence
+    $result.source_inputs_sha256 = $source.sha256
+    $source.inputs | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $runDirectory 'source-inputs.json') -Encoding utf8
     if (!$JavaHome) { $JavaHome = 'C:\Program Files\Android\Android Studio\jbr' }
     if (!(Test-Path -LiteralPath (Join-Path $JavaHome 'bin\java.exe'))) { throw 'Pass -JavaHome with a supported JDK.' }
     $env:JAVA_HOME = $JavaHome
@@ -66,7 +78,7 @@ try {
     $androidReport = Get-Item 'app/build/outputs/androidTest-results/managedDevice/debug/drishtiApi36/TEST-drishtiApi36.xml'
     $result.stages.android = Read-JUnit @($androidReport)
     [xml]$androidXml = Get-Content -LiteralPath $androidReport.FullName -Raw
-    foreach ($required in @('CameraPipelineInstrumentedTest','CloudSessionInterlockInstrumentedTest','DesignReviewInstrumentedTest','YoloxDetectorInstrumentedTest','ItemPhotoInstrumentedTest','AuditStorageInstrumentedTest')) {
+    foreach ($required in @('CameraPipelineInstrumentedTest','CloudSessionInterlockInstrumentedTest','DesignReviewInstrumentedTest','YoloxDetectorInstrumentedTest','ItemPhotoInstrumentedTest','AuditStorageInstrumentedTest','MainActivityJourneyInstrumentedTest')) {
         if ($androidXml.SelectNodes("//testcase[@classname='com.edgepulse.monitor.$required']").Count -eq 0) { throw "Required pipeline coverage missing: $required" }
     }
     $deviceResults = $androidReport.Directory.FullName
@@ -75,7 +87,8 @@ try {
     if (!$positive -or !$camera) { throw 'Positive object detection or actual camera/UID-counter evidence is missing.' }
     $result.stages.positive_detection = 'PASS: pinned COCO airplane detected'
     $result.stages.camera_pipeline = 'PASS: frames, rescan, release and unchanged UID counters; not a field/network-capture acceptance claim'
-    [xml]$coverage = Get-Content 'core/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml' -Raw
+    $coveragePath = 'core/build/reports/jacoco/test/jacocoTestReport.xml'
+    [xml]$coverage = Get-Content $coveragePath -Raw
     $line = $coverage.SelectSingleNode('/report/counter[@type="LINE"]')
     if (!$line -or ([double]$line.covered + [double]$line.missed) -le 0) { throw 'Core line coverage evidence is missing or empty.' }
     $result.core_line_coverage = [double]$line.covered / ([double]$line.covered + [double]$line.missed)
@@ -83,7 +96,7 @@ try {
     $apk = Get-Item 'app/build/outputs/apk/debug/app-debug.apk'
     $result.apk_sha256 = (Get-FileHash -LiteralPath $apk.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     Copy-Item -LiteralPath $androidReport.FullName -Destination (Join-Path $runDirectory 'android-results.xml')
-    Copy-Item -LiteralPath 'core/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml' -Destination (Join-Path $runDirectory 'core-coverage.xml')
+    Copy-Item -LiteralPath $coveragePath -Destination (Join-Path $runDirectory 'core-coverage.xml')
     $renderDirectory = 'app/build/outputs/managed_device_android_test_additional_output'
     $renders = @(Get-ChildItem $renderDirectory -Recurse -Filter '*.png' -ErrorAction SilentlyContinue)
     if ($renders.Count -eq 0) { throw 'Native UI render artifacts were not collected.' }
@@ -91,6 +104,7 @@ try {
     New-Item -ItemType Directory -Path $renderDestination | Out-Null
     foreach ($render in $renders) { Copy-Item -LiteralPath $render.FullName -Destination (Join-Path $renderDestination $render.Name) }
     $result.render_files = $renders.Count
+    if ((Source-Evidence).sha256 -ne $result.source_inputs_sha256) { throw 'Source inputs changed during the run; results must be rerun for the final source.' }
     $result.human_gates = 'NOT PASSED: real provider photo request, physical profiling/field accuracy/battery/OEM alarms and full network capture'
     $result.status = 'PASS_AUTOMATED'
 } catch {

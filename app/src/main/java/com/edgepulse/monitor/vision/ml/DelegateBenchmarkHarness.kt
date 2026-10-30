@@ -192,6 +192,13 @@ class DelegateBenchmarkHarness(private val context: Context, private val setting
     }
 
     private fun compiled(asset: BundledModel, delegate: String): Backend {
+        // Variant names describe quantized weights/input, not necessarily the output interface.
+        val bytes = context.assets.open(asset.asset).use { it.readBytes() }
+        val metadata = ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder()).put(bytes).apply { rewind() }
+        val outputType = Interpreter(metadata).use {
+            require(it.outputTensorCount == 1)
+            it.getOutputTensor(0).dataType().also { type -> require(type == DataType.INT8 || type == DataType.FLOAT32) }
+        }
         val environment = Environment.create(context)
         val accelerator = if (delegate == "NPU_COMPILED") Accelerator.NPU else Accelerator.GPU
         var model: CompiledModel? = null
@@ -212,7 +219,7 @@ class DelegateBenchmarkHarness(private val context: Context, private val setting
                         override fun invoke() {
                             loaded.run(inputs, outputs)
                             // Force host-visible completion; includes readback cost in this conservative gate.
-                            for (output in outputs) { if (asset.variant == "INT8") output.readInt8() else output.readFloat() }
+                            for (output in outputs) { if (outputType == DataType.INT8) output.readInt8() else output.readFloat() }
                         }
                         override fun close() {
                             try { inputs.forEach { it.close() } }

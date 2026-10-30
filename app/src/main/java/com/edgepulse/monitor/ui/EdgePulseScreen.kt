@@ -4,8 +4,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
@@ -16,9 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,18 +48,10 @@ fun EdgePulseScreen(
     BackHandler(enabled = tools) { tools = false }
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); onMessageDismiss() } }
     Scaffold(
-        topBar = { TopAppBar(title = {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PulseMark(active = state.busy != null)
-                Column {
-                    Text(if (embedded) "Settings" else stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-                    Text("PHONE SETUP", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }, actions = {
-            onHome?.let { TextButton(onClick = it) { Text("Done") } }
-            TextButton(onClick = { tools = !tools }) { Text(if (tools) "Back" else "Tools") }
-        }) },
+        topBar = { EdgePageHeader(if (embedded) "Settings" else stringResource(R.string.app_name),"Preferences and setup") {
+            onHome?.let { EdgeTextAction("Done",it) }
+            EdgeTextAction(if (tools) "Back" else "Tools",{ tools = !tools })
+        } },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { insets ->
         Column(Modifier.fillMaxSize().padding(insets).imePadding().widthIn(max = 640.dp)) {
@@ -74,7 +64,7 @@ fun EdgePulseScreen(
                     }
                     Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("AI", "Device", "Reports").forEachIndexed { index, title ->
-                            StepTab(index, title, step == index,
+                            StepTab(title, step == index,
                                 listOf(state.cloudReady, state.deviceReady, state.folderName != null)[index], Modifier.weight(1f)) { step = index }
                         }
                     }
@@ -99,9 +89,7 @@ fun EdgePulseScreen(
                     }
                     when (page) {
                         0 -> {
-                            item { SectionLabel("01", "AI CONNECTION") }
                             item { ApiKeyGateScreen(state, cloudActions) }
-                            if (onUsage != null) item { TextButton(onClick = onUsage) { Text("What is my key used for? View usage  →") } }
                             item {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 TextButton(onClick = { step = 1 }, enabled = enabled, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
@@ -110,7 +98,6 @@ fun EdgePulseScreen(
                             }
                         }
                         1 -> {
-                            item { SectionLabel("02", "DEVICE READINESS") }
                             item { SetupSection {
                                 Text("Prepare this phone", style = MaterialTheme.typography.headlineSmall)
                                 Text("Set up the audit identity and check local AI speed. This runs offline.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -122,8 +109,8 @@ fun EdgePulseScreen(
                                     }, report.tinyP95Ms?.let { "%.2f ms per frame · p95".format(it) })
                                 }
                                 if (state.identityReady) Text("✓  Audit identity ready", style = MaterialTheme.typography.labelLarge)
-                                Button(onClick = { onPrepare(challenge, state.benchmark != null) }, enabled = enabled && !state.identityMismatch,
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(if (state.deviceReady) "Check again" else "Prepare phone") }
+                                EdgePrimaryButton(if (state.deviceReady) "Check again" else "Prepare phone",
+                                    { onPrepare(challenge, state.benchmark != null) },enabled && !state.identityMismatch)
                                 Text("Required: 40 ms or faster. Detailed results in Tools.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } }
                             item { OutlinedButton(onClick = { step = 2 }, enabled = state.identityReady && enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
@@ -131,13 +118,12 @@ fun EdgePulseScreen(
                             } }
                         }
                         2 -> {
-                            item { SectionLabel("03", "LOCAL REPORTS") }
                             item { SetupSection {
                                 Text("Your report folder", style = MaterialTheme.typography.headlineSmall)
                                 Text("Choose storage on this device, an SD card or USB drive. We'll export the public audit identity and schedule checkpoints.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 state.folderName?.let { StatusPanel("Folder saved", it) }
-                                Button(onClick = onChooseFolder, enabled = enabled && state.identityReady && !state.identityMismatch,
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(if (state.folderName == null) "Choose folder" else "Change folder") }
+                                EdgePrimaryButton(if (state.folderName == null) "Choose folder" else "Change folder",
+                                    onChooseFolder,enabled && state.identityReady && !state.identityMismatch)
                                 if (!state.identityReady) TextButton(onClick = { step = 1 }) { Text("Prepare the phone first  →") }
                                 if (state.folderName != null) OutlinedButton(onClick = onExportAudit, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text("Export audit") }
                                 Text("No events yet? We'll tell you before exporting.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -145,6 +131,11 @@ fun EdgePulseScreen(
                         }
                         3 -> {
                             item { Text("Settings & tools", style = MaterialTheme.typography.headlineSmall) }
+                            if (onUsage != null) item {
+                                EdgeSecondaryButton("API activity",onUsage)
+                                Text("Optional history of approved cloud requests.",Modifier.padding(top = 8.dp),
+                                    style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                             item { SetupSection {
                                 Text("Device performance", style = MaterialTheme.typography.titleMedium)
                                 if (state.benchmark == null) Text("No current check. Prepare the phone to measure local AI speed.")
@@ -172,10 +163,6 @@ fun EdgePulseScreen(
                             } }
                         }
                     }
-                    if (page != 3) item {
-                        Text("FOUNDATION BUILD", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Camera monitoring is on Home. Bag counting is still in development.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
                 }
             }
         }
@@ -183,26 +170,19 @@ fun EdgePulseScreen(
 }
 
 @Composable
-private fun StepTab(index: Int, title: String, selected: Boolean, complete: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun StepTab(title: String, selected: Boolean, complete: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
     val colors = MaterialTheme.colorScheme
     val policy = LocalEdgeMotion.current
     val background by animateColorAsState(if (selected) colors.primary else colors.surface, tween(policy.duration(EdgeMotion.FastMs)), label = "Step selection")
     val foreground by animateColorAsState(if (selected) colors.onPrimary else colors.onSurface, tween(policy.duration(EdgeMotion.FastMs)), label = "Step label")
-    Surface(modifier = modifier.border(1.dp, if (selected) colors.primary else colors.outlineVariant, RoundedCornerShape(12.dp)),
+    Surface(modifier = modifier.edgePressFeedback(interaction).border(1.dp, if (selected) colors.primary else colors.outlineVariant, RoundedCornerShape(12.dp)),
         color = background, contentColor = foreground, shape = RoundedCornerShape(12.dp)) {
-        Column(Modifier.selectable(selected, role = Role.Tab, onClick = onClick).heightIn(min = 66.dp).padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp), horizontalAlignment = Alignment.Start) {
-            Text(if (complete) "✓" else "0${index + 1}", style = MaterialTheme.typography.labelSmall)
+        Row(Modifier.selectable(selected, interactionSource = interaction,indication = LocalIndication.current,role = Role.Tab, onClick = onClick)
+            .semantics { stateDescription = if (complete) "Complete" else "Not complete" }.heightIn(min = 52.dp).padding(8.dp),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.labelLarge)
         }
-    }
-}
-
-@Composable
-private fun SectionLabel(number: String, title: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(number, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -221,25 +201,4 @@ private fun StatusPanel(title: String, detail: String? = null, loading: Boolean 
 @Composable
 private fun SetupSection(content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
-}
-
-@Composable
-private fun PulseMark(active: Boolean) {
-    val policy = LocalEdgeMotion.current
-    val ink = MaterialTheme.colorScheme.onPrimary
-    val alpha = if (active && policy.enabled) {
-        val transition = rememberInfiniteTransition(label = "Activity signal")
-        val value by transition.animateFloat(0.4f, 1f, infiniteRepeatable(tween(EdgeMotion.ActivityMs, easing = LinearEasing), RepeatMode.Reverse), label = "Activity opacity")
-        value
-    } else 1f
-    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp)) {
-        Canvas(Modifier.padding(9.dp)) {
-            val pulse = Path().apply {
-                moveTo(0f, size.height * 0.55f); lineTo(size.width * 0.24f, size.height * 0.55f)
-                lineTo(size.width * 0.38f, size.height * 0.15f); lineTo(size.width * 0.58f, size.height * 0.85f)
-                lineTo(size.width * 0.73f, size.height * 0.42f); lineTo(size.width, size.height * 0.42f)
-            }
-            drawPath(pulse, ink.copy(alpha = alpha), style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
-        }
-    }
 }

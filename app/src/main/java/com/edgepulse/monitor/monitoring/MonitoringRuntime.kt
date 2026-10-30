@@ -18,6 +18,7 @@ data class MonitoringState(
     val burst: Boolean = false, val duty: Double = 0.0, val freezes: Long = 0,
     val preRollFrames: Int = 0, val fps: Double = 0.0, val error: String? = null,
     val visibleItems: Int = 0, val inferenceMs: Double = 0.0, val detectorReady: Boolean = false,
+    val outCrossings: Long = 0, val inCrossings: Long = 0,
 )
 
 @Singleton
@@ -51,6 +52,7 @@ class MonitoringRuntime @Inject constructor() {
     fun starting() { mutable.value = MonitoringState(starting = true) }
     fun started(id: String) { mutable.update { it.copy(active = true, starting = false, sessionId = id, error = null) } }
     fun paused(value: Boolean) { mutable.update { it.copy(paused = value) } }
+    fun crossingTotals(out: Long, inbound: Long) { mutable.update { it.copy(outCrossings = out, inCrossings = inbound) } }
     fun stopped(message: String? = null) { overlay.clear(); mutable.update { it.copy(active = false, starting = false, paused = false, error = message) } }
     fun telemetry(frames: Long, foreground: Double, burst: Boolean, duty: Double, freezes: Long, preroll: Int, fps: Double, visible: Int = 0, inferenceMs: Double = 0.0) {
         mutable.update { it.copy(frames = frames, foreground = foreground, burst = burst, duty = duty, freezes = freezes, preRollFrames = preroll, fps = fps,

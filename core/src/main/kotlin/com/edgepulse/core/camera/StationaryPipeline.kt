@@ -47,6 +47,19 @@ class LumaMotionGate {
     }
 }
 
+/** Manual requests are evaluated on every frame, independently of burst wakeup. */
+class RescanSchedule(private val intervalMs: Long = 60_000) {
+    init { require(intervalMs > 0) }
+    private var lastScan = -1L
+    fun reset() { lastScan = -1L }
+    fun requested(manual: Boolean, nowMs: Long): Boolean {
+        require(nowMs >= 0)
+        val periodic = lastScan < 0 || nowMs-lastScan >= intervalMs
+        if (manual || periodic) { lastScan = nowMs; return true }
+        return false
+    }
+}
+
 class TemporalCadenceController(private val startedMs: Long) {
     private var lastMs = startedMs
     private var burstUntil = Long.MIN_VALUE

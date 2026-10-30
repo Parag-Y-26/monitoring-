@@ -1,0 +1,46 @@
+# Drishti enhancement phases - 2026-10-30
+
+Source: `C:\Users\parag\Downloads\drishti_industry_level_phase_prompts.md`, followed in order at the user's request. These are enhancement phases, not replacements for the five construction acceptance phases in BUILD_CONTRACT. The document's restricted reading lists do not override AGENTS.md's contract, security, evidence, or testing requirements.
+
+| Enhancement phase | Implemented behavior | Verification |
+| --- | --- | --- |
+| 1 - Parser and API tokens | Ignore Gemini thought parts; extract wrapped JSON; accept string/array/object traits and optional COCO label. Prefer returned image-capable Flash IDs while preserving selection. Limit output to 256 tokens, add Gemini JSON schema, upload a separate <=512px JPEG at quality 80, and save a matching asset-label class ID. | Parser/catalog tests first failed on the missing category field, then passed. `artifacts/phase1-validation.log`: core tests, debug APK, lint passed. |
+| 2 - Hybrid matching | Objectness proposals survive low class scores; reusable 12x12 averaged features combine per-channel ZNCC and gradient cosine. Search excludes padding; proposals and scan boxes share upright coordinates. COCO/reference fusion suppresses duplicate boxes. Default similarity is 0.78. | Tests first failed on missing region/proposal APIs, then passed: channel illumination changes, padding exclusion, proposal coordinates and clearing. `artifacts/phase2-validation.log`: core tests, debug APK, lint passed. |
+| 3 - Tracking and rescans | Confirmed boxes coast <=450ms; tracks expire after >1500ms; class mismatch adds assignment cost. Every frame consumes manual Rescan independently of periodic cadence and forces immediate inference, including during a burst. | Tests first failed on missing rescan scheduler, then passed; includes class assignment, coasting boundaries and manual requests while cadence is already active. `artifacts/phase3-validation.log`: core tests, debug APK, lint passed. |
+| 4 - Photo setup | FileProvider-backed TakePicture capture with thumbnail fallback, URI loading and final cleanup; crop mode disables parent scrolling; generated offline name; Save directly below preview; 0.55-0.95 similarity slider. | `artifacts/phase4-validation.log`: core tests, APK/test-APK compilation and lint passed. Updated offline photo instrumentation test passes; rendered `item-review.png` was inspected. Full-resolution external camera-app interaction on a physical phone remains unverified. |
+| 5 - Crossing evidence and tensor IO | Finite signed center gate, perpendicular deadband, one event per confirmed identity; predicted coasting cannot count. Eight reusable frame snapshots feed serialized IO signing/encrypted WebP storage. Stop drains pending evidence before export. Overflow/storage failure pauses monitoring and retains a gap start. Track IDs remain unique across camera-owner changes. Show persisted IN/OUT counts and gate. Accept legacy INT8 and FLOAT32 detector output; exporter uses INT8 input with FLOAT32 output and validates both interfaces. Benchmark diagnostics inspect tensor type rather than the weight variant name. | Counter tests first failed on missing counter/box identity APIs, then passed. Core coverage gate, build and lint pass. Three modelprep IO tests pass. Automatic physical crossing-to-service evidence and field accuracy are unverified. Re-export precision experiment is recorded below. |
+
+## Final local evidence
+
+- `:core:check`: 68 JVM tests pass; 720/742 lines covered (97.04%), above the 80% gate.
+- `:app:assembleDebug`, `:app:assembleDebugAndroidTest`, `:app:lintDebug`: pass.
+- Deliverable: `artifacts/Drishti-phase-updates-debug.apk`, SHA-256 `01df94c49dde5a3e471cc94e5dab70f03ae0f75b62f4169306601237fb90f4b6`. The package keeps the incoming v0.6.3/code 9; this is a local debug APK, not a published release.
+- `python -m unittest discover -s tests -v`: 14 tests pass.
+- `python -m unittest tools.modelprep.test_export_io -v`: 3 interface tests pass. These use the separately provisioned modelprep NumPy/Pillow environment, not extra app/runtime dependencies.
+- `uv tool run pip-audit -r tools/requirements.txt`: no known vulnerabilities. The default Python lacks pip-audit; the isolated uv tool supplied it without changing project requirements.
+- Full API 36 managed-emulator run: **26/27 pass, no skips**. See `artifacts/phases-final-validation.log` and `app/build/outputs/androidTest-results/managedDevice/debug/drishtiApi36/TEST-drishtiApi36.xml`.
+- The remaining test is intentionally failing: the bundled INT8 baseline misses the pinned cow image at its 0.25 selected-category threshold. Bottle, dog and chair fixtures pass. The assertion is retained; diagnostics now report all four categories rather than stopping at the first miss.
+- The original whole-app navigation selector matched both the search input and category button; it now excludes editable text. The complete navigation/UID-traffic test passes.
+- Actual emulator CameraX/YUV/rescan/release, encrypted history/migration, consent interlock and UI tests pass. UID byte counters are diagnostic evidence, not a packet-capture or field acceptance claim.
+- Visually inspected emulator renders of the full-screen monitor with gate and the approved-photo screen with default name and enabled offline Save. These are deterministic UI fixtures.
+- During enhancement validation no physical phone was connected. Subsequent phone delivery is recorded below. Live API calls, physical performance, sustained GC/battery/thermal runs, gate placement setup and N=500/site acceptance remain open. The gate is the requested default center segment, not an implemented customizable placement editor.
+
+## Compatibility and implementation decisions
+
+Physical delivery on 2026-10-30: Samsung SM-A346E updated in place from v0.6.2 to v0.6.3/code 9. Installation succeeded; installed APK digest matches the deliverable above. Cold launch, live process and resumed MainActivity were independently verified. The inspected Items-screen render retains the saved person target and 0.30 threshold (`artifacts/phone-update-20261030/launch.png`). This verifies installation/startup and that visible saved selection, not detector accuracy, physical performance, external camera capture or live API behavior.
+
+- Set `thinkingBudget=0` only for returned Gemini 2.5 Flash-family IDs. Gemini 2.5 Pro cannot disable thinking, and other generations have different controls. See [Google's thinking documentation](https://ai.google.dev/gemini-api/docs/generate-content/thinking). This is a capability rule on discovered IDs, not a bundled model catalog.
+- Gemini modality fallback follows the requested `models/gemini-` family rule with TTS/embedding exclusions; it is not live verification that every discovered model supports every request option.
+- Consent remains bound to provider, selected model and the exact smaller JPEG. HTTP clients remain exclusively in CloudAnalysisService after one-shot confirmation, under the shared monitoring interlock.
+- The counter uses confirmed, actually observed boxes with aligned track IDs. A session-wide identity sequence prevents thermal resume or rotation from reusing an audited ID. Frame timestamps, including pre-roll, travel with their immutable copied snapshot.
+- Crossing IO is bounded and serialized with thermal gaps and Stop. Event encoding/signing allocates outside the normal frame path. Reusable arrays and bytecode inspection support the pure matcher hot-path design; a two-hour device GC profile is still required.
+- The four encrypted construction tables, signatures, keys and raw-YUV pre-roll are retained. No dependency versions changed.
+- Work began in an already modified worktree. Existing changes were preserved, including version 0.6.3/code 9, fixtures and prior test tooling. No commits, pushes, publication or completion tags were made. TDD RED/GREEN evidence is retained in tests and validation logs instead of checkpoint commits that would mix existing edits.
+
+## Output precision experiment
+
+Ran offline conversion in the existing pinned converter container, with `--network none`, two CPUs and 4 GB RAM, from the cached checked SavedModel and hash-verified real calibration subset. See `artifacts/phase5-precision/probe.log` and `precision-report.json`. Candidate SHA-256: `ca231b8477ec56de98d29935ad445d4239ff71f8b565a4745fd3f21ab7f6158d`.
+
+The candidate has INT8 input and FLOAT32 output, but its four peak category scores are exactly the same as the existing INT8-output model on the direct-image probes. The cow direct-image peak is 0.395392 for both, versus 0.410143 in the checked FP32 export. **Changing the boundary does not recover the internal quantization precision in this graph.** This is measured evidence, not a claim of a completed precision fix.
+
+The actual emulator camera/YUV fixture yields a cow peak of 0.1812214 at threshold 0.25; bottle/dog/chair pass. Direct-image and CameraX-style YUV preprocessing are different probes and their scores must not be substituted for each other. The failing end-to-end cow assertion is retained. No candidate was imported into the app and no threshold was lowered to hide this miss. Improving model/preprocessing accuracy requires separate measured work; physical benchmarking and field gates remain open.

@@ -21,10 +21,12 @@ class YoloxDetector(context: Context, delegate: String) : Closeable {
     private val inputZero: Int
     private val outputScale: Float
     private val outputZero: Int
+    private val floatOutput: Boolean
+    private val floatValues: java.nio.FloatBuffer
     val bgr = FloatArray(320 * 320 * 3)
     private val raw = FloatArray(2100 * 85)
     private val transforms = Array(4) { LetterboxTransform(640, 480, it * 90) }
-    private val post = YoloxPostProcessor()
+    val post = YoloxPostProcessor()
     val detections = DetectionBuffer()
     var transform = transforms[0]; private set
 
@@ -36,18 +38,20 @@ class YoloxDetector(context: Context, delegate: String) : Closeable {
         try {
             val source = interpreter.getInputTensor(0); val destination = interpreter.getOutputTensor(0)
             check(source.dataType() == DataType.INT8 && source.numElements() == bgr.size)
-            check(destination.dataType() == DataType.INT8 && destination.numElements() == raw.size)
+            floatOutput = destination.dataType() == DataType.FLOAT32
+            check((floatOutput || destination.dataType() == DataType.INT8) && destination.numElements() == raw.size)
             inputScale = source.quantizationParams().scale; inputZero = source.quantizationParams().zeroPoint
             outputScale = destination.quantizationParams().scale; outputZero = destination.quantizationParams().zeroPoint
-            check(inputScale > 0 && outputScale > 0)
+            check(inputScale > 0 && (floatOutput || outputScale > 0))
             input = ByteBuffer.allocateDirect(source.numBytes()).order(ByteOrder.nativeOrder())
             output = ByteBuffer.allocateDirect(destination.numBytes()).order(ByteOrder.nativeOrder())
+            floatValues = output.asFloatBuffer()
             inputs = arrayOf(input); outputs = mapOf(0 to output)
         } catch (failure: Exception) { interpreter.close(); throw failure }
     }
 
     fun infer(y: ByteBuffer, yo: Int, yr: Int, yp: Int, u: ByteBuffer, uo: Int, ur: Int, up: Int,
-        v: ByteBuffer, vo: Int, vr: Int, vp: Int, rotation: Int, threshold: Float) {
+        v: ByteBuffer, vo: Int, vr: Int, vp: Int, rotation: Int, threshold: Float, selectedClassId: Int? = null) {
         transform = transforms[rotation / 90]
         bgr.fill(114f)
         val map = transform
@@ -67,8 +71,9 @@ class YoloxDetector(context: Context, delegate: String) : Closeable {
         for (value in bgr) input.put((value / inputScale + inputZero).roundToInt().coerceIn(-128, 127).toByte())
         input.rewind()
         interpreter.runForMultipleInputsOutputs(inputs, outputs)
-        for (i in raw.indices) raw[i] = (output.get(i).toInt() - outputZero) * outputScale
-        post.decode(raw, map, threshold, .45f, detections)
+        if (floatOutput) { floatValues.rewind(); floatValues.get(raw) }
+        else for (i in raw.indices) raw[i] = (output.get(i).toInt() - outputZero) * outputScale
+        post.decode(raw, map, threshold, .45f, detections, selectedClassId)
     }
     override fun close() { interpreter.close(); bgr.fill(0f); raw.fill(0f) }
 }

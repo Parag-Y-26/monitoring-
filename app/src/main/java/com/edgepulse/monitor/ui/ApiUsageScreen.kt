@@ -18,10 +18,9 @@ import java.util.Date
 fun ApiUsageScreen(entries: List<ApiUsage>, onBack: () -> Unit, embedded: Boolean = false) {
     val known = entries.mapNotNull { it.totalTokens }
     val total = known.fold(BigInteger.ZERO) { sum, n -> sum + BigInteger.valueOf(n) }
-    Scaffold(topBar = { TopAppBar(title = { Column {
-        Text("API purpose & usage", style = MaterialTheme.typography.titleLarge)
-        Text("YOUR CLOUD ACTIVITY", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    } }, actions = { if (!embedded) TextButton(onClick = onBack) { Text("Done") } }) }) { insets ->
+    Scaffold(topBar = { EdgePageHeader("API activity","Optional request history") {
+        EdgeTextAction("Back",onBack)
+    } }) { insets ->
         LazyColumn(Modifier.fillMaxSize().padding(insets), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 Text("Your API activity", style = MaterialTheme.typography.headlineSmall)

@@ -44,12 +44,16 @@ class DesignReviewInstrumentedTest {
             }
         } }
         compose.onNodeWithText("Items").assertHeightIsAtLeast(48.dp).performClick().assertIsSelected()
-        compose.onNodeWithText("Usage").performClick().assertIsSelected()
+        compose.onNodeWithText("Usage").assertDoesNotExist()
+        compose.onAllNodes(isSelectable()).assertCountEquals(3)
+        compose.onNodeWithText("Settings").performClick().assertIsSelected()
         compose.onNodeWithText("Stop monitoring").assertIsDisplayed().performClick()
         compose.runOnIdle { assertTrue(stopped) }
         compose.onNodeWithText("Return to session").performClick()
         compose.onNodeWithText("Monitor").assertIsSelected()
         compose.onNodeWithText("Return to session").assertDoesNotExist()
+        compose.runOnIdle { selected = EdgeDestination.USAGE }
+        compose.onNodeWithText("Settings").assertIsSelected()
     }
 
     @Test fun figmaMonitorRendersInBothThemesAndCompactTextKeepsActionReachable() {
@@ -86,7 +90,7 @@ class DesignReviewInstrumentedTest {
         compose.onNodeWithText("Settings").assertIsDisplayed()
         capture("monitor-compact")
         compose.runOnIdle { paused = true; live = true; review = Review("monitor-paused") }
-        compose.onNodeWithText("Stop monitoring").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Stop monitoring").assertIsDisplayed()
         compose.onNodeWithTag("live-monitor").assertIsDisplayed()
         compose.onNodeWithText("Rescan").assertIsNotEnabled()
         compose.onNodeWithText("More").performClick()
@@ -97,16 +101,16 @@ class DesignReviewInstrumentedTest {
         compose.onNodeWithTag("live-monitor").assertWidthIsEqualTo(360.dp).assertHeightIsEqualTo(780.dp)
         compose.onNodeWithText("Rescan").assertIsEnabled().assertIsDisplayed()
         compose.onNodeWithText("Monitor").assertDoesNotExist()
-        compose.onNodeWithText("Stop monitoring").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Stop monitoring").assertIsDisplayed()
         capture("monitor-live")
         compose.runOnIdle { review = Review("monitor-live-compact", width = 320, height = 568, fontScale = 1.3f) }
         compose.onNodeWithTag("live-monitor").assertWidthIsEqualTo(320.dp).assertHeightIsEqualTo(568.dp)
-        compose.onNodeWithText("Stop monitoring").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Stop monitoring").assertIsDisplayed()
         compose.onNodeWithText("More").assertIsDisplayed()
         capture("monitor-live-compact")
         compose.runOnIdle { review = Review("monitor-live-landscape", width = 780, height = 360) }
         compose.onNodeWithTag("live-monitor").assertWidthIsEqualTo(780.dp).assertHeightIsEqualTo(360.dp)
-        compose.onNodeWithText("Stop monitoring").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Stop monitoring").assertIsDisplayed()
         capture("monitor-live-landscape")
         compose.runOnIdle { review = Review("usage-empty") }
         compose.onNodeWithText("No requests logged yet").assertIsDisplayed()

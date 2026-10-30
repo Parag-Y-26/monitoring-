@@ -25,7 +25,7 @@ import kotlinx.serialization.json.Json
 data class ItemUiState(val profiles: List<ItemProfile> = emptyList(), val selectedId: String = "", val usage: List<ApiUsage> = emptyList(),
     val photo: Bitmap? = null, val approved: Bitmap? = null, val name: String = "", val traits: String = "",
     val setup: ProviderSetup? = null, val photoConsentContext: String? = null, val monitoring: Boolean = false,
-    val referenceUsable: Boolean = false,
+    val referenceUsable: Boolean = false, val matchedCocoClass: String? = null,
     val busy: Boolean = false, val message: String? = null)
 
 @HiltViewModel
@@ -64,7 +64,7 @@ class ItemViewModel @Inject constructor(@ApplicationContext private val context:
         val photo = bounded(bitmap)
         mutable.update { it.copy(photo = photo, approved = null, name = "", traits = "", photoConsentContext = null) }
     }
-    fun loadPhoto(uri: Uri) = action {
+    fun loadPhoto(uri: Uri, afterLoad: () -> Unit = {}) = action(afterLoad) {
         interlock.withSessionState {
         check(settings.dataStore.data.first().activeSessionId == null)
         val bitmap = withContext(Dispatchers.IO) {
@@ -108,16 +108,24 @@ class ItemViewModel @Inject constructor(@ApplicationContext private val context:
             ReferenceMatcher(sample,8,8).usable.also { sample.fill(0f) }
         }
         jpeg?.fill(0)
-        jpeg = withContext(Dispatchers.Default) { ByteArrayOutputStream().use { check(approved.compress(Bitmap.CompressFormat.JPEG, 85, it)); it.toByteArray() } }
+        jpeg = withContext(Dispatchers.Default) {
+            val scale = minOf(1f, 512f / maxOf(approved.width, approved.height))
+            val upload = if (scale == 1f) approved else Bitmap.createScaledBitmap(approved,
+                (approved.width*scale).toInt().coerceAtLeast(1), (approved.height*scale).toInt().coerceAtLeast(1), true)
+            try { ByteArrayOutputStream().use { check(upload.compress(Bitmap.CompressFormat.JPEG, 80, it)); it.toByteArray() } }
+            finally { if (upload !== approved) upload.recycle() }
+        }
         val setup = state.value.setup
-        mutable.update { it.copy(approved = approved, referenceUsable = usable, photoConsentContext = setup?.let { s -> CloudAnalysisService.photoConsentContext(s, jpeg!!) },
+        mutable.update { it.copy(approved = approved, referenceUsable = usable,
+            name = it.name.ifBlank { "Item ${it.profiles.size + 1}" }, matchedCocoClass = null,
+            photoConsentContext = setup?.let { s -> CloudAnalysisService.photoConsentContext(s, jpeg!!) },
             message = if (usable) "Review the cropped image. Face detection is best-effort; mask any remaining private details before uploading."
                 else "This crop has too little distinctive texture for reference matching. Include the object's outline or markings, or discard it and choose a trained category.") }
     }
     fun editPhoto() {
         if (state.value.busy) return
         jpeg?.fill(0); jpeg = null
-        mutable.update { it.copy(approved = null, photoConsentContext = null) }
+        mutable.update { it.copy(approved = null, photoConsentContext = null, matchedCocoClass = null) }
     }
     fun confirmUpload(consent: OneShotUploadConsent) = action {
         check(!state.value.monitoring)
@@ -125,10 +133,11 @@ class ItemViewModel @Inject constructor(@ApplicationContext private val context:
         val image = checkNotNull(jpeg).copyOf()
         try {
             val result = credentials.withApiKey(setup.provider) { key -> cloud.describeItem(setup, key, image, consent) }
-            mutable.update { it.copy(name = result.name, traits = result.characteristics, message = "AI description received. Review the name and traits before saving. This does not train YOLOX.") }
+            mutable.update { it.copy(name = result.name, traits = result.characteristics, matchedCocoClass = result.matchedCocoClass,
+                message = "AI description received. Review the name and traits before saving. This does not train YOLOX.") }
         } finally { image.fill(0) }
     }
-    fun savePhotoTarget(threshold: Float = .90f) = action {
+    fun savePhotoTarget(threshold: Float = .78f) = action {
         val snapshot = state.value
         val image = checkNotNull(snapshot.approved)
         require(snapshot.name.isNotBlank() && snapshot.referenceUsable)
@@ -137,7 +146,10 @@ class ItemViewModel @Inject constructor(@ApplicationContext private val context:
             check(settings.dataStore.data.first().itemProfiles.size < 20)
             val filename = references.save(image)
             try {
-                val profile = ItemProfile(UUID.randomUUID().toString(), snapshot.name, snapshot.traits, filename, similarityThreshold = threshold)
+                val labels = context.assets.open("models/coco_labels.txt").bufferedReader().use { it.readLines() }
+                val classId = labels.indexOfFirst { it.equals(snapshot.matchedCocoClass, ignoreCase = true) }.takeIf { it >= 0 }
+                    ?: labels.indexOfFirst { it.equals(snapshot.name.trim(), ignoreCase = true) }.takeIf { it >= 0 }
+                val profile = ItemProfile(UUID.randomUUID().toString(), snapshot.name, snapshot.traits, filename, classId, similarityThreshold = threshold)
                 profile.validate()
                 settings.dataStore.updateData { it.copy(itemProfiles = it.itemProfiles + profile, selectedItemId = profile.id) }
             } catch (failure: Exception) { references.remove(filename); throw failure }
@@ -171,8 +183,17 @@ class ItemViewModel @Inject constructor(@ApplicationContext private val context:
             if (file.isNotEmpty()) references.remove(file)
         }
     }
-    private fun action(block: suspend () -> Unit) {
-        if (state.value.busy) return
+    fun setDetectionThreshold(id: String, threshold: Float) = action {
+        interlock.withSessionState { settings.dataStore.updateData { saved ->
+            check(saved.activeSessionId == null)
+            val profile = saved.itemProfiles.single { it.id == id }
+            require(profile.classId != null)
+            val updated = profile.copy(detectionThreshold = threshold).also(ItemProfile::validate)
+            saved.copy(itemProfiles = saved.itemProfiles.map { if (it.id == id) updated else it })
+        } }
+    }
+    private fun action(onFinally: () -> Unit = {}, block: suspend () -> Unit) {
+        if (state.value.busy) { onFinally(); return }
         mutable.update { it.copy(busy = true, message = null) }
         operation = viewModelScope.launch {
             try { block() }
@@ -184,7 +205,7 @@ class ItemViewModel @Inject constructor(@ApplicationContext private val context:
                 else -> "Photo analysis did not complete. Check the model and connection. The API usage page records the request outcome."
             }) } }
             catch (_: Exception) { mutable.update { it.copy(message = "Could not finish. Stop monitoring, review the photo/name, and check local storage or the AI connection.") } }
-            finally { mutable.update { it.copy(busy = false) } }
+            finally { onFinally(); mutable.update { it.copy(busy = false) } }
         }
     }
     private fun bounded(bitmap: Bitmap): Bitmap {
@@ -193,6 +214,6 @@ class ItemViewModel @Inject constructor(@ApplicationContext private val context:
             (bitmap.height*scale).toInt().coerceAtLeast(1), true).also { bitmap.recycle() }
     }
     // Displayed Bitmaps are released with Compose/GC; recycling while RenderThread still draws them is unsafe.
-    private fun clearPhoto() { jpeg?.fill(0); jpeg = null }
+    private fun clearPhoto() { jpeg?.fill(0); jpeg = null; mutable.update { it.copy(matchedCocoClass = null) } }
     override fun onCleared() { clearPhoto() }
 }

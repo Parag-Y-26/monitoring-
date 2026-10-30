@@ -4,6 +4,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.SystemClock
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
@@ -25,6 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.*
 import com.edgepulse.core.cloud.*
 import com.edgepulse.monitor.ui.SetupUiState
+import com.edgepulse.monitor.ui.EdgePrimaryButton
+import com.edgepulse.monitor.ui.EdgeTextAction
+import com.edgepulse.monitor.ui.edgePressFeedback
 
 data class CloudSetupActions(
     val chooseProvider: (CloudProvider) -> Unit = {},
@@ -49,6 +53,7 @@ fun ApiKeyGateScreen(state: SetupUiState, actions: CloudSetupActions) {
     var search by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val busy = state.busy != null || !state.storageReady
+    val modelInteraction = remember { MutableInteractionSource() }
     val profile = ProviderDefaults.profile(state.provider)
     LaunchedEffect(state.provider, state.connection != null) {
         if (keyText.isEmpty()) editKey = state.connection == null || state.connection?.needsReconnect == true
@@ -73,10 +78,11 @@ fun ApiKeyGateScreen(state: SetupUiState, actions: CloudSetupActions) {
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             CloudProvider.entries.forEach { provider ->
+                val interaction = remember { MutableInteractionSource() }
                 FilterChip(selected = state.provider == provider, enabled = !busy, onClick = {
                     actions.chooseProvider(provider)
                 }, label = { Text(ProviderDefaults.profile(provider).name, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false) },
-                    modifier = Modifier.heightIn(min = 48.dp))
+                    interactionSource = interaction,modifier = Modifier.heightIn(min = 48.dp).edgePressFeedback(interaction,!busy))
             }
         }
         if (state.connection?.needsReconnect == true) Text("Reconnect this saved custom connection to load models from the official provider.",
@@ -88,29 +94,31 @@ fun ApiKeyGateScreen(state: SetupUiState, actions: CloudSetupActions) {
                 visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }),
-                trailingIcon = { TextButton(onClick = { keyVisible = !keyVisible }) { Text(if (keyVisible) "Hide" else "Show") } },
+                trailingIcon = { EdgeTextAction(if (keyVisible) "Hide" else "Show",{ keyVisible = !keyVisible }) },
                 isError = keyText.length > 4096,
                 supportingText = { Text(if (keyText.length > 4096) "This key is too long." else "Encrypted on this phone. Never added to a report.") })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(enabled = !busy, onClick = {
+                EdgeTextAction("Paste key",enabled = !busy, onClick = {
                     val clipboard = context.getSystemService(ClipboardManager::class.java)
                     clipboard.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString()?.let(::acceptKey)
-                }) { Text("Paste key") }
+                })
                 ProviderDefaults.detect(keyText)?.let { Text("${ProviderDefaults.profile(it).name} detected", style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary) }
             }
             Text("Connect sends your key to ${profile.name}. No photos.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(enabled = !busy && keyText.isNotBlank() && keyText.length <= 4096, onClick = {
+            EdgePrimaryButton(if (state.busy?.startsWith("Connecting") == true) "Connecting…" else "Connect & load models",
+                enabled = !busy && keyText.isNotBlank() && keyText.length <= 4096, onClick = {
                 val bytes = keyText.trim().toByteArray()
                 keyText = ""; keyVisible = false; keyboard?.hide()
                 actions.connect(bytes, OneShotUploadConsent.fromUserTap(ProviderDefaults.discoveryContext(state.provider), SystemClock.elapsedRealtime()))
-            }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(if (state.busy?.startsWith("Connecting") == true) "Connecting…" else "Connect & load models") }
-        } else TextButton(enabled = !busy, onClick = { editKey = true }) { Text("Replace API key") }
+            })
+        } else EdgeTextAction("Replace API key",{ editKey = true },!busy)
 
         if (state.models.isNotEmpty()) {
             val selected = state.models.singleOrNull { it.id == state.selectedModel }
-            OutlinedButton(onClick = { search = ""; modelPicker = true }, enabled = !busy, modifier = Modifier.fillMaxWidth(),
+            OutlinedButton(onClick = { search = ""; modelPicker = true }, enabled = !busy,interactionSource = modelInteraction,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).edgePressFeedback(modelInteraction,!busy),
                 contentPadding = PaddingValues(16.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(selected?.name ?: "Choose model", fontWeight = FontWeight.SemiBold)
@@ -127,17 +135,16 @@ fun ApiKeyGateScreen(state: SetupUiState, actions: CloudSetupActions) {
         if (state.verificationNeeded) {
             Text("NVIDIA's list is public. Verify your chosen model with a one-token text check; provider quota may apply.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(enabled = !busy && state.selectedModel != null && (state.pendingKeyAvailable || state.connection?.needsReconnect == false),
+            EdgePrimaryButton("Verify & save model",enabled = !busy && state.selectedModel != null && (state.pendingKeyAvailable || state.connection?.needsReconnect == false),
                 onClick = { keyboard?.hide(); actions.verifyModel(OneShotUploadConsent.fromUserTap(
-                    ProviderDefaults.setup(state.provider, state.selectedModel!!).consentContext(), SystemClock.elapsedRealtime())) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text("Verify & save model") }
+                    ProviderDefaults.setup(state.provider, state.selectedModel!!).consentContext(), SystemClock.elapsedRealtime())) })
         }
 
         if (state.connection?.needsReconnect == false && !state.verificationNeeded) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(enabled = !busy, onClick = { actions.refresh(OneShotUploadConsent.fromUserTap(
-                    ProviderDefaults.discoveryContext(state.provider), SystemClock.elapsedRealtime())) }) { Text("Refresh models") }
-                TextButton(enabled = !busy, onClick = actions.disconnect) { Text("Remove connection") }
+                EdgeTextAction("Refresh models",{ actions.refresh(OneShotUploadConsent.fromUserTap(
+                    ProviderDefaults.discoveryContext(state.provider), SystemClock.elapsedRealtime())) },!busy)
+                EdgeTextAction("Remove connection",actions.disconnect,!busy)
             }
         }
         state.cloudMessage?.let { message ->
@@ -149,7 +156,7 @@ fun ApiKeyGateScreen(state: SetupUiState, actions: CloudSetupActions) {
         if (state.busy != null) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
             Text(state.busy, style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = actions.cancel) { Text("Cancel request") }
+            EdgeTextAction("Cancel request",actions.cancel)
         }
         if (state.retryConnectionAvailable && keyText.isEmpty()) OutlinedButton(enabled = !busy, onClick = {
             actions.retry(OneShotUploadConsent.fromUserTap(ProviderDefaults.discoveryContext(state.provider), SystemClock.elapsedRealtime()))

@@ -5,6 +5,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ModelDirectoryTest {
+    @Test fun `Gemini fallback recognizes image families and prefers returned Flash`() = runBlocking {
+        val models = ModelDirectory.load(CloudProvider.GEMINI) {
+            CloudResponse(200, """{"models":[{"name":"models/gemini-2.5-pro","supportedGenerationMethods":["generateContent"]},{"name":"models/gemini-2.5-flash","supportedGenerationMethods":["generateContent"]},{"name":"models/gemini-tts","supportedGenerationMethods":["generateContent"]},{"name":"models/gemini-embedding","supportedGenerationMethods":["generateContent"]}]}""")
+        }.models
+        assertEquals("models/gemini-2.5-flash", ModelDirectory.initialSelection(models, null))
+        assertEquals("models/gemini-2.5-pro", ModelDirectory.initialSelection(models, "models/gemini-2.5-pro"))
+        assertFalse(models.single { it.id.endsWith("tts") }.supportsImages!!)
+        assertFalse(models.single { it.id.endsWith("embedding") }.supportsImages!!)
+    }
     @Test fun `key prefixes suggest one provider without making requests`() {
         assertEquals(CloudProvider.GEMINI, ProviderDefaults.detect("AIza-fixture"))
         assertEquals(CloudProvider.OPENROUTER, ProviderDefaults.detect("sk-or-v1-fixture"))
@@ -29,7 +38,7 @@ class ModelDirectoryTest {
         assertEquals(listOf("models/a", "models/z"), result.models.map { it.id })
         assertTrue(visited[1].contains("pageToken=next+page"))
         assertEquals(100L, result.models.last().contextTokens)
-        assertNull(result.models.first().supportsImages)
+        assertEquals(false, result.models.first().supportsImages)
     }
 
     @Test fun `OpenRouter checks key before reading catalog and preserves capabilities`() = runBlocking {

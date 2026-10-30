@@ -2,8 +2,14 @@ package com.edgepulse.core.vision
 
 import kotlin.math.*
 
+/** Shared by successive camera owners so thermal resumes cannot reuse session track IDs. */
+class TrackIdSequence {
+    private var nextId = 1L
+    @Synchronized fun next(): Long = nextId++
+}
+
 /** Bounded four-state constant-velocity Kalman tracks with real elapsed intervals. */
-class ObjectTracker(private val capacity: Int = 128) {
+class ObjectTracker(private val capacity: Int = 128, private val idSequence: TrackIdSequence = TrackIdSequence()) {
     private class Track {
         val x = DoubleArray(4)
         val p = DoubleArray(16)
@@ -16,10 +22,11 @@ class ObjectTracker(private val capacity: Int = 128) {
     private val used = BooleanArray(2100)
     private val a = DoubleArray(16); private val b = DoubleArray(16); private val gain = DoubleArray(8)
     val ids = LongArray(capacity)
+    val boxIds = LongArray(capacity)
+    val boxObserved = BooleanArray(capacity)
     val boxes = DetectionBuffer(capacity)
     var size = 0; private set
     var confirmedVisible = 0; private set
-    private var nextId = 1L
     private var clock = -1L
     fun reset() { size = 0; confirmedVisible = 0; clock = -1; boxes.clear() }
 
@@ -51,14 +58,15 @@ class ObjectTracker(private val capacity: Int = 128) {
             track.x[1] = ((detections.top[d] + detections.bottom[d]) / 2).toDouble()
             for (axis in 0..3) track.p[axis * 4 + axis] = if (axis < 2) .0025 else .05
             track.width = detections.right[d]-detections.left[d]; track.height = detections.bottom[d]-detections.top[d]
-            track.hits = 0; track.seen = elapsedMs; track.predicted = elapsedMs; track.id = nextId++
+            track.hits = 0; track.seen = elapsedMs; track.predicted = elapsedMs; track.id = idSequence.next()
             correct(track, detections, d, elapsedMs); matched[size] = true; size++
         }
         boxes.clear(); confirmedVisible = 0
         for (t in 0 until size) {
             val track = slots[t]; ids[t] = track.id
-            if (track.hits >= 3 && track.seen == elapsedMs) {
+            if (track.hits >= 3 && elapsedMs - track.seen <= 450L) {
                 confirmedVisible++
+                boxIds[boxes.size] = track.id; boxObserved[boxes.size] = track.seen == elapsedMs
                 boxes.add((track.x[0]-track.width/2).toFloat().coerceIn(0f, 1f), (track.x[1]-track.height/2).toFloat().coerceIn(0f, 1f),
                     (track.x[0]+track.width/2).toFloat().coerceIn(0f, 1f), (track.x[1]+track.height/2).toFloat().coerceIn(0f, 1f), track.score, track.category)
             }
@@ -121,6 +129,60 @@ class ObjectTracker(private val capacity: Int = 128) {
         val area = max(1e-6f, track.width*track.height); val other = max(1e-6f, (dr-dl)*(db-dt))
         val union = area+other-intersection; val enclosing = max(1e-6f, (max(r, dr)-min(l, dl))*(max(btm, db)-min(t, dt)))
         val giou = intersection/union-(enclosing-union)/enclosing
-        return .6*(1-giou)+.25*distance/.35+.15*min(2.0, abs(ln(other/area).toDouble()))
+        return .6*(1-giou)+.25*distance/.35+.15*min(2.0, abs(ln(other/area).toDouble()))+
+            if (track.hits >= 2 && detections.classes[i] != track.category) .35 else 0.0
+    }
+}
+
+/** Finite directed gate in upright normalized coordinates. Positive side changes are OUT. */
+class LineCrossingCounter(private val ax: Float = .2f, private val ay: Float = .5f,
+    private val bx: Float = .8f, private val by: Float = .5f, private val deadband: Float = .03f,
+    capacity: Int = 128) {
+    private val dx = bx-ax; private val dy = by-ay
+    private val length = hypot(dx,dy)
+    init {
+        require(capacity > 0 && ax in 0f..1f && ay in 0f..1f && bx in 0f..1f && by in 0f..1f)
+        require(length > 1e-6f && deadband in 0f..1f)
+    }
+    private val keys = LongArray(capacity) { -1L }
+    private val sides = IntArray(capacity)
+    private val previousX = FloatArray(capacity); private val previousY = FloatArray(capacity)
+    private val counted = BooleanArray(capacity)
+    val crossingIds = LongArray(capacity)
+    val crossingDirections = IntArray(capacity)
+    var size = 0; private set
+    fun reset() { keys.fill(-1L); sides.fill(0); counted.fill(false); size = 0 }
+    fun update(tracker: ObjectTracker) {
+        size = 0
+        // Keep state through occlusion, reclaim only identities that actually expired.
+        for (slot in keys.indices) if (keys[slot] >= 0) {
+            var alive = false
+            for (i in 0 until tracker.size) if (tracker.ids[i] == keys[slot]) { alive = true; break }
+            if (!alive) { keys[slot] = -1; sides[slot] = 0; counted[slot] = false }
+        }
+        for (i in 0 until tracker.boxes.size) {
+            if (!tracker.boxObserved[i]) continue // Predicted motion is not crossing evidence.
+            val id = tracker.boxIds[i]
+            var slot = -1; var free = -1
+            for (j in keys.indices) { if (keys[j] == id) { slot = j; break }; if (keys[j] < 0 && free < 0) free = j }
+            if (slot < 0) { slot = free; if (slot < 0) continue; keys[slot] = id }
+            if (counted[slot]) continue
+            val boxes = tracker.boxes
+            val x = (boxes.left[i]+boxes.right[i])*.5f; val y = (boxes.top[i]+boxes.bottom[i])*.5f
+            val distance = (dx*(y-ay)-dy*(x-ax))/length
+            val side = when { distance > deadband -> 1; distance < -deadband -> -1; else -> 0 }
+            if (side == 0) continue
+            if (sides[slot] != 0 && side != sides[slot]) {
+                val oldDistance = dx*(previousY[slot]-ay)-dy*(previousX[slot]-ax)
+                val fraction = oldDistance/(oldDistance-distance*length)
+                val ix = previousX[slot]+fraction*(x-previousX[slot])
+                val iy = previousY[slot]+fraction*(y-previousY[slot])
+                val along = ((ix-ax)*dx+(iy-ay)*dy)/(length*length)
+                if (along in 0f..1f) {
+                    crossingIds[size] = id; crossingDirections[size] = side; size++; counted[slot] = true
+                }
+            }
+            sides[slot] = side; previousX[slot] = x; previousY[slot] = y
+        }
     }
 }

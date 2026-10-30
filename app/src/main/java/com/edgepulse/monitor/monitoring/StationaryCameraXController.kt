@@ -26,7 +26,9 @@ import kotlinx.coroutines.withContext
 
 class StationaryCameraXController(private val context: Context, private val runtime: MonitoringRuntime,
     private val delegate: String = "XNNPACK_INT8", private val burstFps: Int = 5,
-    private val target: ItemProfile? = null, private val reference: Bitmap? = null) {
+    private val target: ItemProfile? = null, private val reference: Bitmap? = null,
+    trackIds: TrackIdSequence = TrackIdSequence(),
+    private val onCrossing: (trackId: Long, direction: String, frameBgr: FloatArray, elapsedMs: Long) -> Unit = { _, _, _, _ -> }) {
     private var provider: ProcessCameraProvider? = null
     private var analysis: ImageAnalysis? = null
     private var preview: Preview? = null
@@ -42,9 +44,10 @@ class StationaryCameraXController(private val context: Context, private val runt
     private var matcher: ReferenceMatcher? = null
     private val selected = DetectionBuffer()
     private val matches = DetectionBuffer()
-    private val tracker = ObjectTracker()
+    private val tracker = ObjectTracker(idSequence = trackIds)
+    private val counter = LineCrossingCounter()
     private var lastInference = 0L
-    private var lastScan = 0L
+    private val scanSchedule = RescanSchedule()
     private var inferenceMs = 0.0
     private var lastRotation = -1
     @Volatile private var closed = false
@@ -86,19 +89,20 @@ class StationaryCameraXController(private val context: Context, private val runt
                 check(image.width == 640 && image.height == 480)
                 val now = SystemClock.elapsedRealtime()
                 if (image.imageInfo.rotationDegrees != lastRotation) {
-                    tracker.reset(); preRoll.clear(); lastScan = 0
+                    tracker.reset(); counter.reset(); preRoll.clear(); scanSchedule.reset()
                     lastRotation = image.imageInfo.rotationDegrees
                 }
                 val planes = image.planes
                 val motion = gate.evaluate(planes[0].buffer, image.width, image.height, planes[0].rowStride, planes[0].pixelStride, now)
-                val rescan = lastScan == 0L || now - lastScan >= 60_000 || runtime.consumeRescan()
+                val manualRescan = runtime.consumeRescan()
+                val rescan = scanSchedule.requested(manualRescan, now)
+                if (rescan) lastInference = now - 1000L
                 if (cadence.update(motion || rescan, now)) {
                     wakePreRoll = preRoll.size
-                    lastScan = now
                     for (i in 0 until preRoll.size) {
                         val slot = preRoll.oldest(i)
                         detector!!.infer(slot.data, 0, 640, 1, slot.data, 640*480, 320, 1,
-                            slot.data, 640*480+320*240, 320, 1, slot.rotationDegrees, .25f)
+                            slot.data, 640*480+320*240, 320, 1, slot.rotationDegrees, target?.detectionThreshold ?: .25f, target?.classId)
                         processDetections(slot.elapsedMs)
                     }
                     preRoll.clear()
@@ -108,7 +112,8 @@ class StationaryCameraXController(private val context: Context, private val runt
                     val started = System.nanoTime()
                     detector!!.infer(planes[0].buffer, planes[0].buffer.position(), planes[0].rowStride, planes[0].pixelStride,
                         planes[1].buffer, planes[1].buffer.position(), planes[1].rowStride, planes[1].pixelStride,
-                        planes[2].buffer, planes[2].buffer.position(), planes[2].rowStride, planes[2].pixelStride, image.imageInfo.rotationDegrees, .25f)
+                        planes[2].buffer, planes[2].buffer.position(), planes[2].rowStride, planes[2].pixelStride, image.imageInfo.rotationDegrees,
+                        target?.detectionThreshold ?: .25f, target?.classId)
                     processDetections(now)
                     inferenceMs = (System.nanoTime() - started) / 1_000_000.0
                     lastInference = now
@@ -149,13 +154,24 @@ class StationaryCameraXController(private val context: Context, private val runt
         if (closed) return
         val model = checkNotNull(detector)
         selected.clear()
-        if (matcher != null && target != null && target.classId == null) {
-            matcher!!.detect(model.bgr, 320, 320, target.similarityThreshold,
-                (target.minWidthFraction*320).toInt().coerceAtLeast(4), (target.maxWidthFraction*320).toInt(), matches)
-            for (i in 0 until matches.size) selected.add(model.transform.uprightX(matches.left[i]*320), model.transform.uprightY(matches.top[i]*320),
-                model.transform.uprightX(matches.right[i]*320), model.transform.uprightY(matches.bottom[i]*320), matches.scores[i], 80)
-        } else for (i in 0 until model.detections.size) if (target?.classId == null || model.detections.classes[i] == target.classId) selected.copyFrom(model.detections, i)
+        if (target == null || target.classId != null) for (i in 0 until model.detections.size)
+            if (target?.classId == null || model.detections.classes[i] == target.classId) selected.copyFrom(model.detections, i)
+        if (matcher != null && target != null) {
+            val map = model.transform
+            matcher!!.detectInRegion(model.bgr,320,320,map.padX,map.padY,map.resizedWidth,map.resizedHeight,
+                target.similarityThreshold,(target.minWidthFraction*map.resizedWidth).toInt().coerceAtLeast(4),
+                (target.maxWidthFraction*map.resizedWidth).toInt().coerceAtLeast(4),model.post.proposals,map,matches)
+            for (i in 0 until matches.size) {
+                var duplicate = false
+                for (j in 0 until selected.size) if (boxIou(matches.left[i],matches.top[i],matches.right[i],matches.bottom[i],
+                    selected.left[j],selected.top[j],selected.right[j],selected.bottom[j]) > .45f) { duplicate = true; break }
+                if (!duplicate) selected.add(matches.left[i],matches.top[i],matches.right[i],matches.bottom[i],matches.scores[i],target.classId ?: 80)
+            }
+        }
         tracker.update(selected, elapsedMs)
+        counter.update(tracker)
+        for (i in 0 until counter.size) onCrossing(counter.crossingIds[i],
+            if (counter.crossingDirections[i] > 0) "OUT" else "IN",model.bgr,elapsedMs)
         runtime.detection(tracker.boxes, model.transform.uprightWidth, model.transform.uprightHeight)
     }
 }

@@ -81,8 +81,8 @@ def io_and_metrics(path, sample_nhwc, expected, variant):
     if len(inputs) != 1 or tuple(inputs[0]["shape"]) != (1, 320, 320, 3) or len(outputs) != 1:
         raise ValueError("Unexpected converted model interface")
     if variant == "INT8":
-        if inputs[0]["dtype"] != np.int8 or outputs[0]["dtype"] != np.int8:
-            raise ValueError("Full INT8 input/output quantization did not succeed")
+        if inputs[0]["dtype"] != np.int8 or outputs[0]["dtype"] not in (np.int8, np.float32):
+            raise ValueError("Expected INT8 input with INT8 or FLOAT32 output")
         scale, zero = inputs[0]["quantization"]
         if scale <= 0:
             raise ValueError("Missing INT8 calibration scale")
@@ -96,7 +96,7 @@ def io_and_metrics(path, sample_nhwc, expected, variant):
     interpreter.set_tensor(inputs[0]["index"], encoded)
     interpreter.invoke()
     actual = interpreter.get_tensor(outputs[0]["index"])
-    if variant == "INT8":
+    if outputs[0]["dtype"] == np.int8:
         scale, zero = outputs[0]["quantization"]
         if scale <= 0:
             raise ValueError("Missing INT8 output scale")
@@ -216,7 +216,10 @@ def main():
                 converter.representative_dataset = representative
                 converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
                 converter.inference_input_type = tf.int8
-                converter.inference_output_type = tf.int8
+                # Keep INT8 internals/input with a float interface for detection scores.
+                # Re-export and measure score error: a float boundary alone cannot recover
+                # precision already lost by an internally quantized concatenation.
+                converter.inference_output_type = tf.float32
             filename = name.replace("-", "_") + "_320_" + variant.lower() + ".tflite"
             path = bundle / "models" / filename
             path.write_bytes(converter.convert())

@@ -5,6 +5,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class StationaryPipelineTest {
+    @Test fun `manual rescan during burst is consumed and resets periodic schedule`() {
+        val scan = RescanSchedule()
+        val cadence = TemporalCadenceController(0)
+        assertTrue(scan.requested(false,0)); assertTrue(cadence.update(true,0))
+        assertFalse(scan.requested(false,100))
+        assertTrue(scan.requested(true,200)); assertFalse(cadence.update(true,200))
+        assertFalse(scan.requested(false,60_000)); assertTrue(scan.requested(false,60_200))
+        scan.reset(); assertTrue(scan.requested(false,60_201))
+    }
     @Test fun `unsigned stride aware luma ignores uniform exposure shifts`() {
         val plane = ByteBuffer.allocateDirect(32 * 70 + 3)
         plane.position(3)

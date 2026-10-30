@@ -72,7 +72,7 @@ class CloudAnalysisService @Inject constructor(
         require(ProviderDefaults.isOfficialOrigin(setup.provider, setup.validationEndpoint))
         require(approvedJpeg.size in 1..1_000_000 && setup.model.isNotBlank())
         withConfirmedClient(approval, photoConsentContext(setup, approvedJpeg)) { client ->
-            val prompt = "Describe only the single inventory object in this reference photo: visible shape, colors, texture and distinctive markings. Do not infer identity of people or hidden attributes. Return only JSON with string fields name and characteristics. These descriptions do not train an object detector."
+            val prompt = "Identify the single main object. Return JSON: {\"name\":string,\"characteristics\":string,\"matchedCocoClass\":string|null} using a standard COCO 80 label if applicable. Ignore people/PII."
             val encoded = Base64.getEncoder().encodeToString(approvedJpeg)
             val body: JsonObject
             val endpoint: String
@@ -84,13 +84,27 @@ class CloudAnalysisService @Inject constructor(
                         addJsonObject { put("text", prompt) }
                         addJsonObject { putJsonObject("inlineData") { put("mimeType", "image/jpeg"); put("data", encoded) } }
                     } } }
-                    putJsonObject("generationConfig") { put("responseMimeType", "application/json"); put("maxOutputTokens", 1000) }
+                    putJsonObject("generationConfig") {
+                        put("responseMimeType", "application/json"); put("maxOutputTokens", 256)
+                        // 2.5 Pro cannot disable thinking; other generations use different controls.
+                        if (setup.model.removePrefix("models/").startsWith("gemini-2.5-flash"))
+                            putJsonObject("thinkingConfig") { put("thinkingBudget", 0) }
+                        putJsonObject("responseSchema") {
+                            put("type", "OBJECT")
+                            putJsonObject("properties") {
+                                putJsonObject("name") { put("type", "STRING") }
+                                putJsonObject("characteristics") { put("type", "STRING") }
+                                putJsonObject("matchedCocoClass") { put("type", "STRING"); put("nullable", true) }
+                            }
+                            putJsonArray("required") { add("name"); add("characteristics"); add("matchedCocoClass") }
+                        }
+                    }
                 }
             } else {
                 endpoint = if (setup.provider == CloudProvider.NVIDIA_NIM) ProviderDefaults.profile(setup.provider).validationEndpoint
                     else ProviderDefaults.profile(setup.provider).modelsEndpoint.toHttpUrl().newBuilder().encodedPath("/api/v1/chat/completions").build().toString()
                 body = buildJsonObject {
-                    put("model", setup.model); put("max_tokens", 1000); put("stream", false)
+                    put("model", setup.model); put("max_tokens", 256); put("stream", false)
                     putJsonArray("messages") { addJsonObject { put("role", "user"); putJsonArray("content") {
                         addJsonObject { put("type", "text"); put("text", prompt) }
                         addJsonObject { put("type", "image_url"); putJsonObject("image_url") { put("url", "data:image/jpeg;base64,$encoded") } }

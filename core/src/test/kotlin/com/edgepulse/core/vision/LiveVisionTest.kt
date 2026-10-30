@@ -4,6 +4,119 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class LiveVisionTest {
+    @Test fun `confirmed boxes coast for 450ms but tracks expire after 1500ms`() {
+        val tracker = ObjectTracker(); val detections = DetectionBuffer().apply { add(.2f,.2f,.4f,.4f,.9f,0) }
+        tracker.update(detections,0); tracker.update(detections,100); tracker.update(detections,200)
+        detections.clear(); tracker.update(detections,650)
+        assertEquals(1,tracker.confirmedVisible); assertEquals(1,tracker.boxes.size)
+        tracker.update(detections,651)
+        assertEquals(0,tracker.confirmedVisible); assertEquals(1,tracker.size)
+        tracker.update(detections,1700); assertEquals(1,tracker.size)
+        tracker.update(detections,1701); assertEquals(0,tracker.size)
+    }
+    @Test fun `established nearby categories retain identity when their positions swap slightly`() {
+        val tracker = ObjectTracker(); val detections = DetectionBuffer()
+        fun frame(swapped: Boolean, time: Long) {
+            detections.clear()
+            val first = if (swapped) .21f else .20f; val second = if (swapped) .20f else .21f
+            detections.add(first,.2f,first+.2f,.4f,.9f,0); detections.add(second,.2f,second+.2f,.4f,.9f,1)
+            tracker.update(detections,time)
+        }
+        frame(false,0); frame(false,100)
+        val id0 = tracker.ids[0]; val id1 = tracker.ids[1]
+        frame(true,200)
+        assertEquals(id0,tracker.ids[0]); assertEquals(id1,tracker.ids[1])
+        assertEquals(0,tracker.boxes.classes[0]); assertEquals(1,tracker.boxes.classes[1])
+        assertTrue(tracker.boxes.left[0] > tracker.boxes.left[1])
+    }
+    private fun texturedReference(): FloatArray = FloatArray(24*24*3) { i ->
+        val x = i/3%24; val y = i/3/24
+        ((x*17+y*31+(i%3)*11)%101).toFloat()
+    }
+    @Test fun `reference matcher tolerates independent channel illumination shifts`() {
+        val reference = texturedReference()
+        val shifted = reference.copyOf()
+        for (i in shifted.indices) shifted[i] = reference[i]*(i%3+1) + (i%3)*70f
+        val output = DetectionBuffer()
+        ReferenceMatcher(reference,24,24).detect(shifted,24,24,.95f,24,24,output)
+        assertEquals(1,output.size)
+    }
+    @Test fun `region matcher excludes padding and scores upright proposals outside scan grid`() {
+        val reference = texturedReference()
+        val image = FloatArray(320*320*3)
+        fun place(x0: Int, y0: Int) {
+            for (y in 0..23) for (x in 0..23) for(c in 0..2)
+                image[((y0+y)*320+x0+x)*3+c] = reference[(y*24+x)*3+c]
+        }
+        place(0,0); place(101,107)
+        val map = LetterboxTransform(640,480,0)
+        val proposals = DetectionBuffer().apply { add(101f/320,(107f-40)/240,125f/320,(131f-40)/240,.8f,80) }
+        val output = DetectionBuffer()
+        ReferenceMatcher(reference,24,24).detectInRegion(image,320,320,0,40,320,240,.98f,24,24,proposals,map,output)
+        assertEquals(1,output.size)
+        assertEquals(101f/320,output.left[0],.001f)
+        assertEquals(67f/240,output.top[0],.001f)
+    }
+    @Test fun `YOLOX keeps objectness proposals below category confidence and clears old proposals`() {
+        val raw = FloatArray(2100*85)
+        raw[0] = 10f; raw[1] = 10f; raw[4] = .21f; raw[5] = .1f
+        val post = YoloxPostProcessor(); val output = DetectionBuffer()
+        post.decode(raw,LetterboxTransform(320,320,0),.9f,.45f,output)
+        assertEquals(0,output.size); assertEquals(1,post.proposals.size)
+        raw.fill(0f)
+        post.decode(raw,LetterboxTransform(320,320,0),.9f,.45f,output)
+        assertEquals(0,post.proposals.size)
+        assertEquals(.78f,ItemProfile("11111111-1111-1111-1111-111111111111","Bottle",classId=39).similarityThreshold,0f)
+    }
+    @Test fun `selected category uses its own score before class selection and NMS`() {
+        val raw = FloatArray(2100 * 85)
+        raw[0] = 10f; raw[1] = 10f
+        raw[4] = .9f
+        raw[5 + 21] = .8f // A competing animal class wins general-purpose argmax.
+        raw[5 + 19] = .6f
+        val detections = DetectionBuffer()
+        val post = YoloxPostProcessor()
+        val transform = LetterboxTransform(320, 320, 0)
+        post.decode(raw, transform, .25f, .45f, detections)
+        assertEquals(21, detections.classes[0])
+        post.decode(raw, transform, .25f, .45f, detections, selectedClassId = 19)
+        assertEquals(1, detections.size)
+        assertEquals(19, detections.classes[0])
+        assertEquals(.54f, detections.scores[0], .0001f)
+        post.decode(raw, transform, .60f, .45f, detections, selectedClassId = 19)
+        assertEquals(0, detections.size)
+        post.decode(raw, transform, .25f, .45f, detections, selectedClassId = 39)
+        assertEquals(0, detections.size)
+        assertThrows(IllegalArgumentException::class.java) {
+            post.decode(raw, transform, .25f, .45f, detections, selectedClassId = 80)
+        }
+    }
+    @Test fun `every trained category can be selected without falling back to person`() {
+        val raw = FloatArray(2100 * 85)
+        val detections = DetectionBuffer()
+        val post = YoloxPostProcessor()
+        for (category in 0..79) {
+            raw.fill(0f)
+            raw[0] = 10f; raw[1] = 10f; raw[4] = .9f
+            raw[5 + category] = .7f
+            raw[5 + (category + 1) % 80] = .8f
+            post.decode(raw, LetterboxTransform(320, 320, 0), .25f, .45f, detections, category)
+            assertEquals(1, detections.size)
+            assertEquals(category, detections.classes[0])
+        }
+    }
+    @Test fun `category threshold persists and legacy targets keep their original default`() {
+        val legacy = """{"id":"11111111-1111-1111-1111-111111111111","name":"Cow","classId":19}"""
+        val profile = kotlinx.serialization.json.Json.decodeFromString<ItemProfile>(legacy)
+        assertEquals(.25f, profile.detectionThreshold, 0f)
+        val adjusted = profile.copy(detectionThreshold = .2f)
+        adjusted.validate()
+        val encoded = kotlinx.serialization.json.Json.encodeToString(ItemProfile.serializer(), adjusted)
+        assertEquals(adjusted, kotlinx.serialization.json.Json.decodeFromString<ItemProfile>(encoded))
+        for (invalid in listOf(.09f, .91f, Float.NaN)) {
+            assertThrows(IllegalArgumentException::class.java) { profile.copy(detectionThreshold = invalid).validate() }
+        }
+    }
     @Test fun `letterbox round trip preserves raw points for all four rotations`() {
         for (rotation in listOf(0, 90, 180, 270)) {
             val box = LetterboxTransform(640, 480, rotation)

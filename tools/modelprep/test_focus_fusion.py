@@ -20,9 +20,9 @@ class FocusFusionTests(unittest.TestCase):
                     fused = fuse_focus_block(copy.deepcopy(original))
                     torch.testing.assert_close(fused(sample), expected, rtol=1e-10, atol=1e-10)
 
-    def test_three_raw_heads_flatten_to_the_original_tiny_and_nano_predictions(self):
+    def test_three_raw_heads_flatten_to_the_original_tiny_predictions(self):
         torch.set_num_threads(2)
-        for name in ("yolox-tiny", "yolox-nano"):
+        for name in ("yolox-tiny",):
             with self.subTest(model=name):
                 model = get_exp(None, name).get_model().eval()
                 model.head.decode_in_inference = False

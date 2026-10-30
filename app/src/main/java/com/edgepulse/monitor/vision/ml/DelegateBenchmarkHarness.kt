@@ -79,7 +79,7 @@ class DelegateBenchmarkHarness(private val context: Context, private val setting
         require(manifest.version == 1)
         require(manifest.models.map { it.model to it.variant }.distinct().size == manifest.models.size)
         require(manifest.models.map { it.model to it.variant }.toSet() == setOf(
-            "YOLOX_TINY" to "FP16", "YOLOX_TINY" to "INT8", "YOLOX_NANO" to "FP16", "YOLOX_NANO" to "INT8"))
+            "YOLOX_TINY" to "FP16", "YOLOX_TINY" to "INT8"))
         // A cached latency is reusable only for the exact bytes that were benchmarked.
         for (asset in manifest.models) validateAsset(asset)
         val cached = settings.dataStore.data.first().benchmarkCache
@@ -88,7 +88,7 @@ class DelegateBenchmarkHarness(private val context: Context, private val setting
             if (previous.fingerprint == Build.FINGERPRINT && previous.manifestSha256 == manifestHash && previous.runtimeVersion == runtimeVersion && previous.environment == environment) return@withContext previous
         }
         val measurements = mutableListOf<DelegateMeasurement>()
-        for (model in listOf("YOLOX_TINY", "YOLOX_NANO")) {
+        for (model in listOf("YOLOX_TINY")) {
             for ((delegate, variant) in listOf("NPU_COMPILED" to "INT8", "GPU_FP16" to "FP16", "XNNPACK_INT8" to "INT8")) {
                 coroutineContext.ensureActive()
                 val asset = manifest.models.singleOrNull { it.model == model && it.variant == variant }
@@ -133,7 +133,7 @@ class DelegateBenchmarkHarness(private val context: Context, private val setting
         context.getSystemService(PowerManager::class.java)?.currentThermalStatus else null
 
     private fun validateAsset(asset: BundledModel) {
-        require(asset.model in setOf("YOLOX_TINY", "YOLOX_NANO") && asset.variant in setOf("FP16", "INT8"))
+        require(asset.model == "YOLOX_TINY" && asset.variant in setOf("FP16", "INT8"))
         require(asset.license == "Apache-2.0" && AuditCanonical.validHash(asset.sha256))
         require(Regex("models/[a-z0-9_]+\\.tflite").matches(asset.asset))
         val actual = context.assets.open(asset.asset).use { input ->

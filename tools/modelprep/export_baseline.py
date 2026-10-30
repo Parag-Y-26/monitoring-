@@ -142,7 +142,9 @@ def main():
         checkpoint = root / "weights" / item["name"]
         if digest(checkpoint) != item["sha256"]:
             raise ValueError("Official checkpoint digest mismatch")
-        name = "yolox-tiny" if item["model"] == "YOLOX_TINY" else "yolox-nano"
+        if item["model"] != "YOLOX_TINY":
+            raise ValueError("Only the construction YOLOX-Tiny model is supported")
+        name = "yolox-tiny"
         model = get_exp(None, name).get_model().cpu().eval()
         state = torch.load(checkpoint, map_location="cpu", weights_only=True)
         model.load_state_dict(state["model"], strict=True)
@@ -235,7 +237,7 @@ def main():
                   "output_contract": "COCO 80-class raw YOLOX head; decode_in_inference=false; not a trained cement-bag detector",
                   "accuracy_evaluated": False, "physical_benchmark": "HUMAN-GATED", "metrics": metrics}
     (bundle / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
-    # Publish the manifest last; its presence means all four conversions/structural checks completed.
+    # Publish the manifest last; its presence means both conversions/structural checks completed.
     (bundle / "manifest.json").write_text(json.dumps({"version": 1, "models": models}, indent=2) + "\n")
     print("COCO baseline bundle prepared. Field training, accuracy and physical latency are not verified.")
 

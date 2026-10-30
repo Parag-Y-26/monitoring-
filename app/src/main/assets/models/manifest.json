@@ -14,20 +14,6 @@
       "asset": "models/yolox_tiny_320_int8.tflite",
       "sha256": "d05724a9226508251ddbb4e0a333badc02fa9bf241257795d8011c4497f05acf",
       "license": "Apache-2.0"
-    },
-    {
-      "model": "YOLOX_NANO",
-      "variant": "FP16",
-      "asset": "models/yolox_nano_320_fp16.tflite",
-      "sha256": "ce28b43f793fcb8c688237b35ed1241a0829eeaabc871a6aa6e3aae0bd778ae1",
-      "license": "Apache-2.0"
-    },
-    {
-      "model": "YOLOX_NANO",
-      "variant": "INT8",
-      "asset": "models/yolox_nano_320_int8.tflite",
-      "sha256": "f3c3e6fb4614b1f2cfd7e908ad27fa409cf9c0f3b06a8a70e66859aecfc83e7b",
-      "license": "Apache-2.0"
     }
   ]
 }

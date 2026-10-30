@@ -4,14 +4,15 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.edgepulse.monitor.security.SecureSettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
-@Database(entities = [GardenMapEntity::class, PlantNodeEntity::class, PlantObservationEntity::class,
-    MonitoringSessionEntity::class, InventoryEventEntity::class, MonitoringGapEntity::class,
-    ArchiveIndexEntity::class], version = 1, exportSchema = true)
+@Database(entities = [MonitoringSessionEntity::class, InventoryEventEntity::class, MonitoringGapEntity::class,
+    ArchiveIndexEntity::class], version = 2, exportSchema = true)
 abstract class EdgePulseDatabase : RoomDatabase() {
     abstract fun monitoringDao(): MonitoringDao
     private var driverKey: ByteArray? = null
@@ -22,6 +23,19 @@ abstract class EdgePulseDatabase : RoomDatabase() {
     }
 
     companion object {
+        /** Retains all signed history/session identities; removes only the retired feature's storage. */
+        private val CONSTRUCTION_ONLY_MIGRATION = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS plant_observations")
+                db.execSQL("DROP TABLE IF EXISTS plant_nodes")
+                db.execSQL("DROP TABLE IF EXISTS garden_maps")
+                db.execSQL("DELETE FROM archive_index WHERE source_table = 'OBS'")
+                for (column in listOf("align_method", "align_rot_rad", "align_tx_m", "align_tz_m", "align_sigma_m")) {
+                    db.execSQL("ALTER TABLE monitoring_sessions DROP COLUMN $column")
+                }
+            }
+        }
+
         suspend fun open(context: Context, settings: SecureSettingsStore): EdgePulseDatabase = withContext(Dispatchers.IO) {
             System.loadLibrary("sqlcipher")
             val passphrase = settings.databasePassphrase()
@@ -31,6 +45,7 @@ abstract class EdgePulseDatabase : RoomDatabase() {
             try {
                 db = Room.databaseBuilder(context.applicationContext, EdgePulseDatabase::class.java, "edgepulse.db")
                     .openHelperFactory(SupportOpenHelperFactory(driverPassphrase, null, true))
+                    .addMigrations(CONSTRUCTION_ONLY_MIGRATION)
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                     .build()
                 db.driverKey = driverPassphrase

@@ -5,39 +5,10 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "garden_maps")
-data class GardenMapEntity(
-    @PrimaryKey val map_id: String,
-    val name: String,
-    val has_arcore_planes: Boolean,
-    val accuracy_tier: String,
-    val origin_plaque_id: String?,
-    val created_at_wall: Long,
-)
-
-@Entity(tableName = "plant_nodes", foreignKeys = [ForeignKey(
-    entity = GardenMapEntity::class, parentColumns = ["map_id"], childColumns = ["map_id"],
-)], indices = [Index("map_id")])
-data class PlantNodeEntity(
-    @PrimaryKey val node_id: String,
-    val map_id: String,
-    val detected_class: String = "plant",
-    val species_label: String? = null,
-    val world_x_meters: Double,
-    val world_z_meters: Double,
-    val cov_xx: Double,
-    val cov_xz: Double,
-    val cov_zz: Double,
-    val close_sightings_count: Int,
-    val latest_enc_webp_path: String?,
-    val cloud_health_markdown: String? = null,
-    val updated_at_wall: Long,
-)
-
 @Entity(tableName = "monitoring_sessions")
 data class MonitoringSessionEntity(
     @PrimaryKey val session_id: String,
-    val mode: String,
+    val mode: String = "CEMENT",
     val is_session_active: Boolean = false,
     val last_heartbeat_elapsed_ms: Long = 0,
     val last_heartbeat_wall_ms: Long = 0,
@@ -50,11 +21,6 @@ data class MonitoringSessionEntity(
     val gate_by: Double? = null,
     val out_normal_x: Double? = null,
     val out_normal_y: Double? = null,
-    val align_method: String? = null,
-    val align_rot_rad: Double = 0.0,
-    val align_tx_m: Double = 0.0,
-    val align_tz_m: Double = 0.0,
-    val align_sigma_m: Double = 0.05,
     val total_out_count: Long = 0,
     val total_in_count: Long = 0,
     val pubkey_spki_b64: String,
@@ -67,22 +33,6 @@ data class MonitoringSessionEntity(
     val started_wall_ms: Long,
     val ended_wall_ms: Long? = null,
     val cloud_audit_report: String? = null,
-)
-
-@Entity(tableName = "plant_observations", foreignKeys = [
-    ForeignKey(entity = PlantNodeEntity::class, parentColumns = ["node_id"], childColumns = ["node_id"]),
-    ForeignKey(entity = MonitoringSessionEntity::class, parentColumns = ["session_id"], childColumns = ["session_id"]),
-], indices = [Index("node_id"), Index("session_id")])
-data class PlantObservationEntity(
-    @PrimaryKey(autoGenerate = true) val obs_id: Long = 0,
-    val node_id: String,
-    val session_id: String,
-    val enc_webp_path: String?,
-    val webp_purged: Boolean = false,
-    val obs_x_meters: Double,
-    val obs_z_meters: Double,
-    val distance_d_meters: Double,
-    val captured_wall_ms: Long,
 )
 
 @Entity(tableName = "inventory_events", foreignKeys = [ForeignKey(

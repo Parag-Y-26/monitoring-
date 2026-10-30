@@ -96,6 +96,7 @@ class MainActivity : ComponentActivity() {
                     Text("DRISHTI", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     Text("EdgePulse AI", style = MaterialTheme.typography.headlineLarge)
                     Text("Phase 1 · Secure foundation", style = MaterialTheme.typography.titleMedium)
+                    Text("Construction inventory monitoring", style = MaterialTheme.typography.bodyMedium)
                     HorizontalDivider()
                     Text(storage)
                     Text("Audit: $identity")
@@ -166,8 +167,16 @@ class MainActivity : ComponentActivity() {
                                     if (current.checkpointTreeUri.isEmpty()) exportStatus = "Choose a local folder with Export public audit identity first."
                                     else if (current.benchmarkCache.isEmpty()) exportStatus = "Run the local benchmark first."
                                     else {
-                                        DailyCheckpointExporter(contentResolver).exportBenchmark(Uri.parse(current.checkpointTreeUri), Json.decodeFromString<BenchmarkReport>(current.benchmarkCache))
-                                        exportStatus = "Benchmark report exported. Hardware acceleration still needs device profiling."
+                                        val report = Json.decodeFromString<BenchmarkReport>(current.benchmarkCache)
+                                        val manifestHash = withContext(Dispatchers.IO) {
+                                            assets.open("models/manifest.json").use { AuditCanonical.hex(AuditCanonical.hash(it.readBytes())) }
+                                        }
+                                        if (report.manifestSha256 != manifestHash || report.measurements.any { it.model != "YOLOX_TINY" }) {
+                                            exportStatus = "Model bundle changed. Run the local benchmark again."
+                                        } else {
+                                            DailyCheckpointExporter(contentResolver).exportBenchmark(Uri.parse(current.checkpointTreeUri), report)
+                                            exportStatus = "Benchmark report exported. Hardware acceleration still needs device profiling."
+                                        }
                                     }
                                 } catch (cancelled: CancellationException) { throw cancelled }
                                 catch (_: Exception) { exportStatus = "Benchmark export failed. Check local folder access." }

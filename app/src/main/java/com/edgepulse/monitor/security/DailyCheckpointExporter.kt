@@ -23,6 +23,7 @@ class DailyCheckpointExporter(private val resolver: ContentResolver) {
     private val exportJson = Json { encodeDefaults = true }
     suspend fun exportBenchmark(treeUri: Uri, report: BenchmarkReport): Uri = withContext(Dispatchers.IO) {
         LocalSafFolder.requireLocalTree(treeUri)
+        require(report.measurements.isNotEmpty() && report.measurements.all { it.model == "YOLOX_TINY" })
         val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
         val timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").withZone(ZoneOffset.UTC).format(Instant.now())
         val destination = checkNotNull(DocumentsContract.createDocument(resolver, parent, "application/json", "benchmark_$timestamp.json"))

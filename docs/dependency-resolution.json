@@ -199,27 +199,6 @@
       ]
     },
     {
-      "name": "arcore",
-      "coordinate": "com.google.ar:core",
-      "selected": "1.56.0",
-      "exception": null,
-      "metadata": "https://dl.google.com/dl/android/maven2/com/google/ar/core/maven-metadata.xml",
-      "candidates": [
-        {
-          "version": "1.57.0",
-          "published_last_modified": "2026-10-15T16:58:59+00:00",
-          "eligible": false,
-          "pom": "https://dl.google.com/dl/android/maven2/com/google/ar/core/1.57.0/core-1.57.0.pom"
-        },
-        {
-          "version": "1.56.0",
-          "published_last_modified": "2026-08-31T20:39:33+00:00",
-          "eligible": true,
-          "pom": "https://dl.google.com/dl/android/maven2/com/google/ar/core/1.56.0/core-1.56.0.pom"
-        }
-      ]
-    },
-    {
       "name": "room",
       "coordinate": "androidx.room:room-runtime",
       "selected": "2.8.5",

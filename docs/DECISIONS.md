@@ -22,3 +22,6 @@
 - 2026-10-29 D020: Restrict audit/identity/benchmark SAF exports to the Android local external-storage provider; cloud-backed document providers could otherwise transmit data during monitoring without upload consent.
 - 2026-10-29 D021: Despite the DailyCheckpointExporter class name, schedule checkpoints every four hours per v5 §4.2, with best-effort WorkManager timing; session-end calls belong to Phase 2's stop workflow.
 - 2026-10-29 D022: Always encode the audit envelope version and exercise the actual Python CLI on JVM wire bundles; omitting Kotlin's default-valued version made otherwise valid exported chains unreadable by the strict verifier.
+- 2026-10-30 D023: Remove gardening as explicitly requested: construction-only storage, Tiny-only model assets/tooling and five active phases; privacy/cloud becomes Phase 5.
+- 2026-10-30 D024: Upgrade SQLCipher/Room v1 to v2 in place, dropping only spatial tables/columns and retired archive indexes while retaining sessions, signed history and key material; keep v1 schema and the original spec solely as migration/history references.
+- 2026-10-30 D025: Retired observation stills become unindexed and are purged by the existing archive recovery path; do not reset the encrypted database or delete construction evidence.

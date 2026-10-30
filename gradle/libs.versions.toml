@@ -13,7 +13,6 @@ activity = "1.13.0"
 core = "1.19.1"
 camera = "1.6.1"
 litert = "2.3.0"
-arcore = "1.56.0"
 room = "2.8.5"
 sqlcipher = "4.19.1"
 tink = "1.23.0"
@@ -45,7 +44,6 @@ camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cam
 camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camera" }
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
 litert-gpu = { module = "com.google.ai.edge.litert:litert-gpu", version.ref = "litert" }
-arcore = { module = "com.google.ar:core", version.ref = "arcore" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-testing = { module = "androidx.room:room-testing", version.ref = "room" }

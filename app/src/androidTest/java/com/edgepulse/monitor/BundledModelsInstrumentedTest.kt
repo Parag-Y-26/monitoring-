@@ -19,11 +19,12 @@ import org.tensorflow.lite.Interpreter
 /** Runtime compatibility checks only. Emulator timings are never device acceptance evidence. */
 @RunWith(AndroidJUnit4::class)
 class BundledModelsInstrumentedTest {
-    @Test fun allFourBundledAssetsInvokeWithTheExportedTensorContract() {
+    @Test fun bothConstructionAssetsInvokeWithTheExportedTensorContract() {
         val assets = InstrumentationRegistry.getInstrumentation().targetContext.assets
         val manifest = assets.open("models/manifest.json").use { Json.decodeFromString<ModelManifest>(it.readBytes().toString(Charsets.UTF_8)) }
-        assertEquals(4, manifest.models.size)
+        assertEquals(2, manifest.models.size)
         for (asset in manifest.models) {
+            assertEquals("YOLOX_TINY", asset.model)
             val bytes = assets.open(asset.asset).use { it.readBytes() }
             assertEquals(asset.sha256, AuditCanonical.hex(AuditCanonical.hash(bytes)))
             val model = ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder()).put(bytes).apply { rewind() }
@@ -60,10 +61,10 @@ class BundledModelsInstrumentedTest {
         }
     }
 
-    @Test fun compiledModelPathInvokesTheFp16NanoAssetOnCpu() {
+    @Test fun compiledModelPathInvokesTheFp16TinyAssetOnCpu() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         Environment.create(context).use { environment ->
-            CompiledModel.create(context.assets, "models/yolox_nano_320_fp16.tflite", CompiledModel.Options(Accelerator.CPU), environment).use { model ->
+            CompiledModel.create(context.assets, "models/yolox_tiny_320_fp16.tflite", CompiledModel.Options(Accelerator.CPU), environment).use { model ->
                 val inputs = model.createInputBuffers()
                 try {
                     val outputs = model.createOutputBuffers()

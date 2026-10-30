@@ -49,8 +49,11 @@ class SecureStorageInstrumentedTest {
             val names = db.openHelper.readableDatabase.query("SELECT name FROM sqlite_master WHERE type='table'").use { cursor ->
                 buildSet { while (cursor.moveToNext()) add(cursor.getString(0)) }
             }
-            assertTrue(names.containsAll(setOf("garden_maps", "plant_nodes", "plant_observations", "monitoring_sessions", "inventory_events", "monitoring_gaps", "archive_index")))
-            db.monitoringDao().insertMap(GardenMapEntity("map", marker, true, "30CM", null, 1))
+            assertTrue(names.containsAll(setOf("monitoring_sessions", "inventory_events", "monitoring_gaps", "archive_index")))
+            assertEquals(4, names.count { it !in setOf("room_master_table", "android_metadata", "sqlite_sequence") })
+            db.monitoringDao().insertSession(MonitoringSessionEntity("storage", boot_id = "test", pubkey_spki_b64 = marker,
+                attestation_cert_pem = "", attestation_nonce_mode = "NONE", key_continuity_status = "UNVERIFIED",
+                started_elapsed_ms = 1, started_wall_ms = 1))
             val supplied = marker.toByteArray()
             val setup = ProviderSetup(CloudProvider.GEMINI, URI("https", "example.invalid", "/validate", null).toString())
             assertTrue(ApiKeyRepository(settings).validateAndStore(setup, supplied) { it.contentEquals(marker.toByteArray()) })
@@ -74,7 +77,7 @@ class SecureStorageInstrumentedTest {
             settings = SecureSettingsStore(context, TinkKeyManager(context, alias))
             assertTrue(settings.isUnlockedOffline())
             db = EdgePulseDatabase.open(context, settings)
-            assertEquals(marker, db.monitoringDao().map("map")?.name)
+            assertEquals(marker, db.monitoringDao().session("storage")?.pubkey_spki_b64)
         } finally {
             db?.close(); settings.close()
             KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(alias) }
@@ -94,16 +97,17 @@ class SecureStorageInstrumentedTest {
         val bitmap = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GREEN) }
         try {
             val dao = db.monitoringDao()
-            dao.insertMap(GardenMapEntity("map", "test", true, "30CM", null, 1))
-            dao.savePlant(PlantNodeEntity("plant", "map", world_x_meters = 0.0, world_z_meters = 0.0,
-                cov_xx = 0.1, cov_xz = 0.0, cov_zz = 0.1, close_sightings_count = 1, latest_enc_webp_path = null, updated_at_wall = 1))
-            dao.insertSession(MonitoringSessionEntity("session", "GARDEN", boot_id = "test", pubkey_spki_b64 = "test",
+            dao.insertSession(MonitoringSessionEntity("session", boot_id = "test", pubkey_spki_b64 = "test",
                 attestation_cert_pem = "", attestation_nonce_mode = "NONE", key_continuity_status = "UNVERIFIED",
                 started_elapsed_ms = 1, started_wall_ms = 1))
             val archive = WebpCircularArchiver(context, db, keys.streamingAead, quotaBytes = 4_000)
-            suspend fun write() = archive.archive(bitmap, "OBS") { value ->
-                dao.insertObservation(PlantObservationEntity(node_id = "plant", session_id = "session", enc_webp_path = value.filename,
-                    obs_x_meters = 0.0, obs_z_meters = 0.0, distance_d_meters = 1.0, captured_wall_ms = 1))
+            var sequence = 0L
+            suspend fun write() = archive.archive(bitmap) { value ->
+                sequence++
+                dao.insertEvent(InventoryEventEntity(session_id = "session", track_id = sequence, direction = "OUT", bag_weight = 1,
+                    running_out_total = sequence, enc_webp_path = value.filename, webp_sha256 = value.plaintextSha256,
+                    monotonic_elapsed_ms = sequence, wall_clock_ms = sequence, prev_chain_hash = "0".repeat(64),
+                    chain_hash = "a".repeat(64), ecdsa_sig_b64 = "test", audit_sequence = sequence, audit_record_json = "test"))
             }
             val first = write()
             val plaintext = archive.read(first.filename) { it.readBytes() }

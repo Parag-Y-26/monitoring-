@@ -25,7 +25,7 @@ def validate_bundle(bundle):
         raise ValueError("Missing model conversion, calibration or license-review provenance")
     if set(manifest) != {"version", "models"} or manifest["version"] != 1:
         raise ValueError("Invalid manifest")
-    expected = {(model, variant) for model in ("YOLOX_TINY", "YOLOX_NANO") for variant in ("FP16", "INT8")}
+    expected = {("YOLOX_TINY", variant) for variant in ("FP16", "INT8")}
     seen, names = set(), set()
     for item in manifest["models"]:
         if set(item) != {"model", "variant", "asset", "sha256", "license"}:
@@ -51,7 +51,7 @@ def validate_bundle(bundle):
         seen.add(pair)
         names.add(item["asset"])
     if seen != expected:
-        raise ValueError("All four Tiny/Nano FP16/INT8 assets are required")
+        raise ValueError("Both Tiny FP16/INT8 assets are required")
     return manifest
 
 
@@ -71,7 +71,7 @@ def main():
         shutil.copyfile(args.bundle / item["asset"], destination / Path(item["asset"]).name)
     for name in ("LICENSE", "provenance.json", "manifest.json"):
         shutil.copyfile(args.bundle / name, destination / name)
-    print("Imported four checksum-verified assets. Runtime tensor validation and physical benchmarking remain required.")
+    print("Imported two checksum-verified Tiny assets. Runtime tensor validation and physical benchmarking remain required.")
 
 
 if __name__ == "__main__":

@@ -3,28 +3,19 @@ package com.edgepulse.monitor.data.local
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MonitoringDao {
-    @Insert suspend fun insertMap(value: GardenMapEntity)
-    @Query("SELECT * FROM garden_maps WHERE map_id = :id") suspend fun map(id: String): GardenMapEntity?
-    @Upsert suspend fun savePlant(value: PlantNodeEntity)
-    @Insert suspend fun insertObservation(value: PlantObservationEntity): Long
     @Insert suspend fun insertSession(value: MonitoringSessionEntity)
     @Insert suspend fun insertEvent(value: InventoryEventEntity): Long
     @Insert suspend fun insertGap(value: MonitoringGapEntity): Long
     @Insert suspend fun insertArchive(value: ArchiveIndexEntity)
 
-    @Query("SELECT * FROM monitoring_sessions ORDER BY started_wall_ms DESC")
+    @Query("SELECT * FROM monitoring_sessions WHERE mode = 'CEMENT' ORDER BY started_wall_ms DESC")
     fun observeSessions(): Flow<List<MonitoringSessionEntity>>
     @Query("SELECT * FROM monitoring_sessions WHERE session_id = :id")
     suspend fun session(id: String): MonitoringSessionEntity?
-    @Query("SELECT * FROM plant_nodes WHERE map_id = :mapId")
-    fun observePlants(mapId: String): Flow<List<PlantNodeEntity>>
-    @Query("SELECT * FROM plant_observations WHERE node_id = :nodeId ORDER BY captured_wall_ms")
-    fun observeTimeline(nodeId: String): Flow<List<PlantObservationEntity>>
     @Query("UPDATE monitoring_sessions SET last_heartbeat_elapsed_ms = :elapsed, last_heartbeat_wall_ms = :wall WHERE session_id = :id AND is_session_active = 1")
     suspend fun heartbeat(id: String, elapsed: Long, wall: Long)
     @Query("UPDATE monitoring_sessions SET is_session_active = :active, ended_wall_ms = :endedAt WHERE session_id = :id")
@@ -53,8 +44,4 @@ interface MonitoringDao {
     suspend fun markArchivePurged(path: String)
     @Query("UPDATE inventory_events SET webp_purged = 1 WHERE enc_webp_path = :path")
     suspend fun markEventPurged(path: String)
-    @Query("UPDATE plant_observations SET webp_purged = 1 WHERE enc_webp_path = :path")
-    suspend fun markObservationPurged(path: String)
-    @Query("UPDATE plant_nodes SET latest_enc_webp_path = NULL WHERE latest_enc_webp_path = :path")
-    suspend fun clearPlantThumbnail(path: String)
 }

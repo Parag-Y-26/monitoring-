@@ -42,7 +42,7 @@ class MonitoringAuditRepository(
         val out = Math.addExact(outCounts[sessionId] ?: 0, if (direction == "OUT") bagWeight.toLong() else 0)
         val inbound = Math.addExact(inCounts[sessionId] ?: 0, if (direction == "IN") bagWeight.toLong() else 0)
         var signed: SignedAuditRecord? = null
-        archiver.archive(bitmap, "EVENT") { keyframe ->
+        archiver.archive(bitmap) { keyframe ->
             assertCurrentHead()
             val record = next(AuditPayload("EVENT", sessionId, sequence + 1, session.boot_id, elapsedMs, wallMs,
                 mapOf("track_id" to trackId.toString(), "direction" to direction, "bag_weight" to bagWeight.toString(),
@@ -100,6 +100,7 @@ class MonitoringAuditRepository(
 
     private suspend fun requireSession(id: String, elapsedMs: Long): MonitoringSessionEntity {
         val session = checkNotNull(dao.session(id)) { "Monitoring session does not exist" }
+        require(session.mode == "CEMENT") { "Only construction sessions can receive new records" }
         require(elapsedMs >= session.started_elapsed_ms)
         check(session.pubkey_spki_b64 == signer.publicKeySpkiBase64) { "Session belongs to a different audit identity" }
         return session

@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 
 data class ArchivedKeyframe(val filename: String, val encryptedBytes: Long, val plaintextSha256: String)
 
-/** Stores encrypted still images only. The callback commits the signed event/observation atomically with its index. */
+/** Stores encrypted event stills only. The callback commits the signed event atomically with its index. */
 class WebpCircularArchiver(
     context: Context,
     private val database: EdgePulseDatabase,
@@ -39,10 +39,8 @@ class WebpCircularArchiver(
 
     suspend fun archive(
         bitmap: Bitmap,
-        sourceTable: String,
         persistSource: suspend (ArchivedKeyframe) -> Long,
     ): ArchivedKeyframe = withContext(Dispatchers.IO) {
-        require(sourceTable == "EVENT" || sourceTable == "OBS")
         require(bitmap.width in 1..4096 && bitmap.height in 1..4096)
         mutex.withLock {
             if (!recovered) { recoverLocked(); recovered = true }
@@ -69,7 +67,7 @@ class WebpCircularArchiver(
                     val sourceId = persistSource(archived)
                     require(sourceId > 0)
                     dao.insertArchive(ArchiveIndexEntity(name, archived.encryptedBytes,
-                        SystemClock.elapsedRealtime(), dao.nextArchiveOrder(), sourceTable, sourceId))
+                        SystemClock.elapsedRealtime(), dao.nextArchiveOrder(), "EVENT", sourceId))
                     check(dao.archiveBytes() <= quotaBytes)
                 }
                 archived
@@ -122,8 +120,6 @@ class WebpCircularArchiver(
     private suspend fun markPurged(name: String) = database.withTransaction {
         dao.markArchivePurged(name)
         dao.markEventPurged(name)
-        dao.markObservationPurged(name)
-        dao.clearPlantThumbnail(name)
     }
 
     private fun checkedFile(name: String): File {

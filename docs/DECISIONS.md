@@ -44,3 +44,4 @@
 - 2026-10-30 D042: Create the requested editable Figma redesign, then translate it into existing native Compose components; keep Monitor/Items/Usage/Settings persistent outside active monitoring and retain Stop when navigating away from a session.
 - 2026-10-30 D043: The user's subsequent full-screen/floating-controls request overrides the active camera layout: use FILL_CENTER with tested center-crop label mapping, compact status and Stop/Rescan/More; keep full-frame detection counts distinct from stock totals.
 - 2026-10-30 D044: Figma's Starter MCP limit blocked later canvas revisions; preserve the reviewed file and document newer Compose-only full-screen/copy changes rather than claiming a synchronized design.
+- 2026-10-30 D045: Use Drishti as the sole user-facing app name per the user's correction; retain existing package, database, Keystore aliases and cryptographic domain identifiers so installed data and audit verification remain compatible.

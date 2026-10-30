@@ -20,9 +20,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.edgepulse.monitor.ui.auth.ApiKeyGateScreen
 import com.edgepulse.monitor.ui.auth.CloudSetupActions
+import com.edgepulse.monitor.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +54,7 @@ fun EdgePulseScreen(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 PulseMark(active = state.busy != null)
                 Column {
-                    Text(if (embedded) "Settings" else "EdgePulse", style = MaterialTheme.typography.titleLarge)
+                    Text(if (embedded) "Settings" else stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
                     Text("PHONE SETUP", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

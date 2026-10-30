@@ -128,7 +128,7 @@ class MonitoringForegroundService : LifecycleService() {
                     camera?.close(); camera = null
                     pauseElapsed = SystemClock.elapsedRealtime(); pauseWall = System.currentTimeMillis(); pauseReason = "CAMERA_ERROR"
                     runtime.paused(true)
-                    MonitoringNotifications.alert(this@MonitoringForegroundService, "Camera interrupted. Open EdgePulse and stop the session.")
+                    MonitoringNotifications.alert(this@MonitoringForegroundService, "Camera interrupted. Open Drishti and stop the session.")
                 }
             } }
         }
@@ -178,7 +178,7 @@ class MonitoringForegroundService : LifecycleService() {
             runtime.stopped()
             checkpoints.exportNow()
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { runtime.stopped("Session could not close safely. Reopen EdgePulse and try Stop again.") }
+        catch (_: Exception) { runtime.stopped("Session could not close safely. Reopen Drishti and try Stop again.") }
         finally { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE); stopSelf() }
     }
 

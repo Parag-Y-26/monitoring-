@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Drishti</string>
+    <string name="monitoring_notification_title">Drishti camera monitoring</string>
+    <string name="attention_notification_title">Drishti needs attention</string>
+</resources>

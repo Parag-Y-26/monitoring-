@@ -21,14 +21,14 @@ object MonitoringNotifications {
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(context, 1, Intent(context, MonitoringForegroundService::class.java).setAction(MonitoringForegroundService.STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(context, RUNNING).setSmallIcon(R.drawable.ic_edgepulse)
-            .setContentTitle("EdgePulse camera monitoring").setContentText("Offline object detection · local motion watch")
+            .setContentTitle(context.getString(R.string.monitoring_notification_title)).setContentText("Offline object detection · local motion watch")
             .setContentIntent(open).setOngoing(true).addAction(0, "Stop monitoring", stop).build()
     }
     fun alert(context: Context, text: String) {
         channels(context)
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val value = NotificationCompat.Builder(context, ALERT).setSmallIcon(R.drawable.ic_edgepulse)
-            .setContentTitle("EdgePulse needs attention").setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentTitle(context.getString(R.string.attention_notification_title)).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH).setContentIntent(open).setAutoCancel(true).build()
         context.getSystemService(NotificationManager::class.java).notify(2102, value)
     }

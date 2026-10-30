@@ -119,6 +119,6 @@ class MainActivity : ComponentActivity() {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
         monitoringRuntime.starting()
         try { ContextCompat.startForegroundService(this, Intent(this, MonitoringForegroundService::class.java)) }
-        catch (_: Exception) { monitoringRuntime.stopped("Camera service could not start. Keep EdgePulse visible and check camera access.") }
+        catch (_: Exception) { monitoringRuntime.stopped("Camera service could not start. Keep Drishti visible and check camera access.") }
     }
 }

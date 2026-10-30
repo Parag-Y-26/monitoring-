@@ -1,4 +1,4 @@
-# EdgePulse (Drishti) AI
+# Drishti
 
 Native Kotlin/Compose inventory monitoring app under development. Users can select a trained object category or enroll a reference photo; gardening remains removed.
 

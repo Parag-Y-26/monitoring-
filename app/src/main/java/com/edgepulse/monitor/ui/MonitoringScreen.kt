@@ -19,12 +19,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.edgepulse.monitor.monitoring.DetectionOverlay
 import com.edgepulse.monitor.monitoring.MonitoringState
 import com.edgepulse.core.vision.PreviewProjection
+import com.edgepulse.monitor.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,8 +42,8 @@ fun MonitoringScreen(setup: SetupUiState, monitor: MonitoringState, onSettings: 
         return
     }
     Scaffold(topBar = { TopAppBar(title = { Column {
-        Text("EdgePulse", style = MaterialTheme.typography.titleLarge)
-        Text("DRISHTI / LOCAL MONITORING", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
+        Text("LOCAL MONITORING", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } }) }, bottomBar = {
         Surface {
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {

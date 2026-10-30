@@ -2,10 +2,12 @@
 
 As of 2026-10-30. Scope now includes user-selected inventory items and photo-assisted setup; gardening remains removed. The overriding BUILD_CONTRACT defines five phases; the original attached v5 document is historical where it differs.
 
+Current package: Drishti v0.6.1 (version code 7). Launcher label, app headings and notification branding use Drishti. Build/lint, 48 JVM tests, 14 Python tests and pip-audit pass; packaged APK label verified with aapt. The user chose APK delivery for now, so the latest physical installation/render checks remain deferred.
+
 | Phase | State | Evidence / remaining work |
 | --- | --- | --- |
 | Bootstrap | DONE | Pinned dependencies, locks, native Kotlin/Compose build. |
-| 1 Security/storage/benchmark | IN PROGRESS | v0.6 builds/lints; 48 JVM and 14 Python tests pass. Last device run: 22 tests before the latest full-screen revision; rerun pending USB reconnection. Encrypted catalogs/items/usage; existing history/keys retained. No completion tag. |
+| 1 Security/storage/benchmark | IN PROGRESS | v0.6.1 builds/lints; 48 JVM and 14 Python tests pass. Last device run: 22 tests before the latest full-screen revision; device rerun deferred. Encrypted catalogs/items/usage; existing history/keys retained. No completion tag. |
 | 2 Stationary pipeline | IN PROGRESS | User requested working Start/Stop before remaining field gates. Camera service, motion gate/raw pre-roll, telemetry, heartbeat/thermal adapters and Home controls implemented. User confirmed live preview; foreground camera ownership and normal Stop independently observed. Sustained/alarm acceptance remains unverified. |
 | 3 Detector | IN PROGRESS | v0.5 invokes Tiny XNNPACK from YUV, decodes/NMS, draws live boxes, supports category/reference targets. Real COCO probe: five airplane/truck boxes on phone/emulator. Field training/export and accuracy gates remain open. |
 | 4 Counter | IN PROGRESS | Four-state Kalman tracks, minHits=3, <=1.5 s occlusion retention and confirmed visible counts. Line crossing/setup and signed crossing events remain pending. |
@@ -38,4 +40,4 @@ As of 2026-10-30. Scope now includes user-selected inventory items and photo-ass
 
 The user confirmed the live person label and replacement Gemini connection/model selection in v0.5. Photo analysis returned an error; exact message/HTTP status is still needed and it is not marked passed.
 
-v0.6 adds the Figma-based four-tab layout and latest user-directed full-screen camera with a floating Stop/Rescan/More bar and shorter copy. Final device installation/render checks await USB reconnection. Figma's Starter MCP limit blocked synchronizing the later full-screen revision; see FIGMA_DESIGN.md. Custom reference matching remains experimental; descriptions do not train YOLOX, and scores are not calibrated probabilities. Cumulative crossing accuracy remains unfinished/human-gated.
+v0.6 adds the Figma-based four-tab layout and latest user-directed full-screen camera with a floating Stop/Rescan/More bar and shorter copy; v0.6.1 corrects the public app name to Drishti. Final device installation/render checks were deferred by the user. Figma's Starter MCP limit blocked synchronizing the later full-screen revision; see FIGMA_DESIGN.md. Custom reference matching remains experimental; descriptions do not train YOLOX, and scores are not calibrated probabilities. Cumulative crossing accuracy remains unfinished/human-gated.

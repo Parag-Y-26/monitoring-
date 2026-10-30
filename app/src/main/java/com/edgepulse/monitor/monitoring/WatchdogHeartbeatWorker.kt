@@ -44,7 +44,7 @@ class WatchdogHeartbeatWorker(context: Context, parameters: WorkerParameters) : 
                             .recordGap(id, "OS_KILL_DETECTED", saved.lastHeartbeatElapsedMs, now, saved.lastHeartbeatWallMs, System.currentTimeMillis())
                     }
                     // Never fabricate a cross-reboot elapsed interval. User closes the retained session.
-                    MonitoringNotifications.alert(applicationContext, "Camera heartbeat stopped. Open EdgePulse and close the interrupted session.")
+                    MonitoringNotifications.alert(applicationContext, "Camera heartbeat stopped. Open Drishti and close the interrupted session.")
                     Result.success()
                 } finally { db.close() }
             }

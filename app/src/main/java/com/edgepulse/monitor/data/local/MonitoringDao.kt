@@ -24,6 +24,8 @@ interface MonitoringDao {
     suspend fun updateDutyMetrics(id: String, duty: Double, freezes: Long)
     @Query("UPDATE monitoring_sessions SET total_out_count = :outCount, total_in_count = :inCount WHERE session_id = :id")
     suspend fun updateCounts(id: String, outCount: Long, inCount: Long)
+    @Query("SELECT COUNT(*) > 0 FROM monitoring_gaps WHERE session_id = :id AND reason = 'OS_KILL_DETECTED'")
+    suspend fun hasProcessGap(id: String): Boolean
     @Query("SELECT audit_record_json FROM (SELECT audit_sequence, audit_record_json FROM inventory_events UNION ALL SELECT audit_sequence, audit_record_json FROM monitoring_gaps) ORDER BY audit_sequence")
     suspend fun auditRecordsJson(): List<String>
     @Query("SELECT audit_record_json FROM (SELECT audit_sequence, audit_record_json FROM inventory_events UNION ALL SELECT audit_sequence, audit_record_json FROM monitoring_gaps) ORDER BY audit_sequence DESC LIMIT 1")

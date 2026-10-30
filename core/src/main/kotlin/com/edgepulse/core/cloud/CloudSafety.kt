@@ -57,6 +57,8 @@ class MonitoringNetworkInterlock {
         persistInactive()
         monitoring = false
     }
+    /** Heartbeat, recovery and stop decisions share the upload/start lock. */
+    suspend fun <T> withSessionState(block: suspend () -> T): T = mutex.withLock { block() }
     suspend fun <T> withConfirmedUpload(consent: OneShotUploadConsent, context: String, elapsedMs: () -> Long, block: suspend () -> T): T = mutex.withLock {
         consent.consume(context, elapsedMs())
         if (monitoring) throw MonitoringActiveException()
@@ -67,6 +69,7 @@ class MonitoringNetworkInterlock {
 enum class KeyValidationStatus {
     VALID, INVALID_KEY, PERMISSION_DENIED, QUOTA_OR_RATE_LIMIT, CONFIGURATION_ERROR,
     PROVIDER_UNAVAILABLE, UNEXPECTED_RESPONSE, NETWORK_ERROR,
+    NO_MODELS,
 }
 
 object ProviderResponseValidator {

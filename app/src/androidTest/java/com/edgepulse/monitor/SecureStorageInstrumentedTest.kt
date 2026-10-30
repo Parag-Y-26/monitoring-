@@ -12,17 +12,87 @@ import java.io.File
 import java.security.KeyStore
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import com.edgepulse.core.cloud.CloudProvider
 import com.edgepulse.core.cloud.ProviderSetup
+import com.edgepulse.core.cloud.CloudModel
+import com.edgepulse.core.cloud.CloudResponse
+import com.edgepulse.core.cloud.ApiUsage
+import com.edgepulse.core.vision.ItemProfile
+import kotlinx.serialization.json.Json
 import java.net.URI
 import com.google.ai.edge.litert.Accelerator
 import com.google.ai.edge.litert.Environment
 
 @RunWith(AndroidJUnit4::class)
 class SecureStorageInstrumentedTest {
+    @Test fun cachedModelsAndSelectionSurviveOfflineReopen() = runBlocking {
+        val base = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(base.cacheDir, "catalog-test-${UUID.randomUUID()}").apply { mkdirs() }
+        val context = ScratchContext(base, root)
+        val alias = "edgepulse.test.catalog.${UUID.randomUUID()}"
+        var settings = SecureSettingsStore(context, TinkKeyManager(context, alias))
+        try {
+            val models = listOf(CloudModel("owner/image", "Image model", true, 1000), CloudModel("owner/text", "Text model", false))
+            val setup = ProviderSetup(CloudProvider.OPENROUTER, URI("https", "example.invalid", "/key", null).toString(), "owner/image")
+            val key = "fixture-credential".toByteArray()
+            val repository = ApiKeyRepository(settings)
+            assertTrue(repository.validateAndStore(setup, key, models) { true })
+            assertTrue(key.all { it == 0.toByte() })
+            repository.selectModel(CloudProvider.OPENROUTER, "owner/text")
+            var invalidSelectionRejected = false
+            try { repository.selectModel(CloudProvider.OPENROUTER, "invented-model") }
+            catch (_: IllegalArgumentException) { invalidSelectionRejected = true }
+            assertTrue(invalidSelectionRejected)
+            val profile = ItemProfile(UUID.randomUUID().toString(), "Fixture bottle", classId = 39)
+            settings.dataStore.updateData { it.copy(itemProfiles = listOf(profile), selectedItemId = profile.id) }
+            ApiUsageRepository(settings).record(CloudProvider.OPENROUTER, "ITEM_PHOTO_DESCRIPTION", "owner/image", 1,
+                CloudResponse(200, """{"usage":{"prompt_tokens":12,"completion_tokens":8,"total_tokens":20}}"""), "HTTP_200")
+            settings.close()
+            settings = SecureSettingsStore(context, TinkKeyManager(context, alias))
+            val state = settings.dataStore.data.first()
+            assertEquals(CloudProvider.OPENROUTER, state.activeCloudProvider)
+            val cached = ApiKeyRepository(settings).connections(state).single()
+            assertEquals(models, cached.models)
+            assertEquals("owner/text", cached.model)
+            assertTrue(cached.fetchedWallMs > 0)
+            assertTrue(settings.isUnlockedOffline())
+            assertEquals(profile, state.itemProfiles.single())
+            assertEquals(profile.id, state.selectedItemId)
+            val usage = Json.decodeFromString<List<ApiUsage>>(state.apiUsageJson).single()
+            assertEquals(20L, usage.totalTokens); assertEquals(1, usage.images)
+            ApiKeyRepository(settings).clear(CloudProvider.OPENROUTER)
+            assertFalse(settings.isUnlockedOffline())
+        } finally {
+            settings.close()
+            KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(alias) }
+            check(root.canonicalFile.parentFile == base.cacheDir.canonicalFile)
+            root.deleteRecursively()
+        }
+    }
+    @Test fun itemReferenceIsEncryptedAndRejectsWholeFileTampering(): Unit = runBlocking {
+        val base = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(base.cacheDir, "reference-test-${UUID.randomUUID()}").apply { mkdirs() }
+        val context = ScratchContext(base, root)
+        val alias = "edgepulse.test.reference.${UUID.randomUUID()}"
+        val store = ReferenceImageStore(context, TinkKeyManager(context, alias))
+        val bitmap = Bitmap.createBitmap(32,32,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+        try {
+            val name = store.save(bitmap)
+            val file = File(context.noBackupFilesDir,"item-references/$name")
+            assertFalse(file.readBytes().take(4).toByteArray().toString(Charsets.US_ASCII) == "RIFF")
+            store.load(name).also { assertEquals(32,it.width); it.recycle() }
+            val bytes = file.readBytes(); bytes[bytes.lastIndex] = (bytes.last().toInt() xor 1).toByte(); file.writeBytes(bytes)
+            assertThrows(Exception::class.java) { store.load(name) }
+            assertThrows(IllegalArgumentException::class.java) { store.load("../outside") }
+        } finally {
+            bitmap.recycle(); KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(alias) }
+            check(root.canonicalFile.parentFile == base.cacheDir.canonicalFile); root.deleteRecursively()
+        }
+    }
     @Test fun bundledLiteRtRuntimeLoadsWithoutModelDelivery() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         Environment.create(context).use { environment ->

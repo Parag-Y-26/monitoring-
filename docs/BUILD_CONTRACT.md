@@ -11,12 +11,14 @@ The user approved the attached v5.0 guide on 2026-10-29 because the requested v4
 5. Construction is blocked when YOLOX-Tiny p95 >40 ms. <=35 ms at 5 FPS is the Tier C target, not a second eligibility gate.
 6. Log burst duty cycle and 30-second background-freeze timeouts; display both in the debug HUD.
 7. 2026-10-30 scope change: construction inventory monitoring only. Remove the garden feature, spatial storage, ARCore and YOLOX-Nano. The active plan has five phases; privacy/cloud is Phase 5. The unmodified attached v5 document remains a historical reference where this contract supersedes it.
+8. 2026-10-30 usability change: key-only provider setup with automatic model discovery. Official public provider origins are now bundled to remove URL/model-ID entry; credentials and model catalogs remain user-owned/encrypted. Connect, Refresh and NVIDIA Verify actions each require a fresh explicit one-shot network confirmation. Confirm & Upload remains the image-upload action for Phase 5. No network requests occur on startup or during monitoring.
+9. 2026-10-30 user scope expansion: support user-selected inventory items, reference photos, AI-assisted visual descriptions, live labels/location/counting and visible API usage. Cement is one possible item. Gardening stays removed. One-photo matching is not trained arbitrary-object recognition; disclose model coverage and validation limits. Photo analysis requires preview/redaction and fresh Confirm & Upload outside monitoring.
 
 ## Non-negotiable implementation boundaries
 
 - Resolve stable dependencies against Google Maven/Maven Central, excluding releases younger than 14 days. The user approved DataStore/datastore-tink 1.3.0 as the sole cooling-period exception. CameraX stays at the explicitly requested 1.6.1.
 - Pin versions in `gradle/libs.versions.toml`; record metadata and POM timestamps in `dependency-resolution.json`.
-- No monitoring network traffic. Only `CloudAnalysisService` may own an OkHttpClient, instantiated after an explicit Confirm & Upload tap. Never bundle API keys or service endpoints.
+- No monitoring network traffic. Only `CloudAnalysisService` may own an OkHttpClient, instantiated after an explicit matching user action (Connect, Refresh, Verify, or future Confirm & Upload). Only documented official provider origins are bundled; no credentials or model lists. Legacy custom-origin credentials cannot be silently sent to a new origin.
 - Tink + encrypted DataStore with a Keystore wrapping key; no EncryptedSharedPreferences/security-crypto. Room + SQLCipher for monitoring_sessions, inventory_events, monitoring_gaps and archive_index; StreamingAead for encrypted WebP stills. Backups and device transfer exclude all private state. Schema upgrades retain construction audit history and keys.
 - Construction CameraX runs inside a camera LifecycleService started while the Activity is visible.
 - Apache-2.0 YOLOX only. No Ultralytics/YOLOv8 and no video files. All camera Images/ImageProxies close in `finally`; no allocations in the monitoring frame hot path.

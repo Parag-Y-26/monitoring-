@@ -3,6 +3,13 @@ package edgepulse;
 option java_package = "com.edgepulse.monitor.proto";
 option java_multiple_files = true;
 
+message CloudModelProto {
+  string id = 1;
+  string name = 2;
+  int32 image_support = 3;
+  int64 context_tokens = 4;
+}
+
 message ProviderCredentialProto {
   string provider = 1;
   bytes api_key = 2;
@@ -10,6 +17,8 @@ message ProviderCredentialProto {
   string model = 4;
   bool validated = 5;
   int64 validated_wall_ms = 6;
+  repeated CloudModelProto models = 7;
+  int64 models_fetched_wall_ms = 8;
 }
 
 message SecureSettingsProto {
@@ -27,4 +36,8 @@ message SecureSettingsProto {
   bytes verifier_challenge_sha256 = 13;
   string last_checkpoint_status = 14;
   int64 last_checkpoint_wall_ms = 15;
+  string active_cloud_provider = 16;
+  string item_profiles_json = 17;
+  string selected_item_id = 18;
+  string api_usage_json = 19;
 }

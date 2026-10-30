@@ -60,13 +60,28 @@ data class BenchmarkReport(
     val completedWallMs: Long = 0,
     val thermalStatusStart: Int? = null,
     val thermalStatusEnd: Int? = null,
+    val cameraIoPolicy: String = "REUSABLE_BUFFER_V1",
 )
 
 /** Runs only on explicit first-run setup, outside any camera frame loop. */
 class DelegateBenchmarkHarness(private val context: Context, private val settings: SecureSettingsStore) {
     private val runtimeVersion = BuildConfig.LITERT_VERSION
 
-    suspend fun run(force: Boolean = false): BenchmarkReport = withContext(Dispatchers.IO) {
+    suspend fun readCachedReport(): BenchmarkReport? = withContext(Dispatchers.IO) {
+        try {
+            val bytes = context.assets.open("models/manifest.json").use { it.readBytes() }
+            val manifest = Json.decodeFromString<ModelManifest>(bytes.toString(Charsets.UTF_8))
+            require(manifest.models.map { it.model to it.variant }.toSet() == setOf("YOLOX_TINY" to "FP16", "YOLOX_TINY" to "INT8"))
+            manifest.models.forEach(::validateAsset)
+            settings.dataStore.data.first().benchmarkCache.takeIf(String::isNotEmpty)?.let { Json.decodeFromString<BenchmarkReport>(it) }
+                ?.takeIf { it.fingerprint == Build.FINGERPRINT && it.runtimeVersion == runtimeVersion &&
+                    it.manifestSha256 == AuditCanonical.hex(AuditCanonical.hash(bytes)) && it.measurements.all { measurement -> measurement.model == "YOLOX_TINY" } }
+                ?.let(::reusableCameraReport)
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { null }
+    }
+
+    suspend fun run(force: Boolean = false, onProgress: (String) -> Unit = {}): BenchmarkReport = withContext(Dispatchers.IO) {
         val startedWallMs = System.currentTimeMillis()
         val thermalStart = thermalStatus()
         // A virtual CPU's timings must never unlock physical-device acceptance.
@@ -85,11 +100,12 @@ class DelegateBenchmarkHarness(private val context: Context, private val setting
         val cached = settings.dataStore.data.first().benchmarkCache
         if (!force && cached.isNotEmpty()) {
             val previous = Json.decodeFromString<BenchmarkReport>(cached)
-            if (previous.fingerprint == Build.FINGERPRINT && previous.manifestSha256 == manifestHash && previous.runtimeVersion == runtimeVersion && previous.environment == environment) return@withContext previous
+            if (previous.fingerprint == Build.FINGERPRINT && previous.manifestSha256 == manifestHash && previous.runtimeVersion == runtimeVersion && previous.environment == environment) return@withContext reusableCameraReport(previous)
         }
         val measurements = mutableListOf<DelegateMeasurement>()
         for (model in listOf("YOLOX_TINY")) {
             for ((delegate, variant) in listOf("NPU_COMPILED" to "INT8", "GPU_FP16" to "FP16", "XNNPACK_INT8" to "INT8")) {
+                onProgress("Checking performance · ${measurements.size + 1} of 3…")
                 coroutineContext.ensureActive()
                 val asset = manifest.models.singleOrNull { it.model == model && it.variant == variant }
                 if (asset == null) {
@@ -116,7 +132,7 @@ class DelegateBenchmarkHarness(private val context: Context, private val setting
                 }
             }
         }
-        val winner = measurements.filter { it.model == "YOLOX_TINY" && it.status == "MEASURED" }.minByOrNull { it.p95Ms!! }
+        val winner = measurements.filter { it.model == "YOLOX_TINY" && it.delegate == "XNNPACK_INT8" && it.status == "MEASURED" }.minByOrNull { it.p95Ms!! }
         val p95 = winner?.p95Ms
         val report = BenchmarkReport(Build.FINGERPRINT, manifestHash, runtimeVersion, measurements,
             winner?.delegate, p95, !emulator && (p95?.let(BenchmarkPolicy::constructionEligible) ?: false),
@@ -128,6 +144,14 @@ class DelegateBenchmarkHarness(private val context: Context, private val setting
     }
 
     private interface Backend : Closeable { fun invoke() }
+
+    private fun reusableCameraReport(report: BenchmarkReport): BenchmarkReport {
+        val cpu = report.measurements.singleOrNull { it.model == "YOLOX_TINY" && it.delegate == "XNNPACK_INT8" && it.status == "MEASURED" }
+        val p95 = cpu?.p95Ms?.takeIf { it.isFinite() && it > 0 }
+        val physical = report.environment == "PHYSICAL_DEVICE_CANDIDATE"
+        return report.copy(tinyWinner = cpu?.delegate, tinyP95Ms = p95, constructionEligible = physical && (p95?.let(BenchmarkPolicy::constructionEligible) ?: false),
+            tierCTargetMet = physical && (p95?.let(BenchmarkPolicy::tierCTargetMet) ?: false), burstFps = if (physical) p95?.let(BenchmarkPolicy::burstFps) ?: 0 else 0)
+    }
 
     private fun thermalStatus(): Int? = if (Build.VERSION.SDK_INT >= 29)
         context.getSystemService(PowerManager::class.java)?.currentThermalStatus else null

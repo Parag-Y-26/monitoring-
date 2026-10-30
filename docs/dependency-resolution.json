@@ -12,13 +12,13 @@
       "candidates": [
         {
           "version": "9.5.0",
-          "published_last_modified": "2026-10-28T14:11:57+00:00",
+          "published_last_modified": "2026-10-28T19:41:57+05:30",
           "eligible": false,
           "pom": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/9.5.0/gradle-9.5.0.pom"
         },
         {
           "version": "9.4.1",
-          "published_last_modified": "2026-09-18T14:15:56+00:00",
+          "published_last_modified": "2026-09-18T19:45:56+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/9.4.1/gradle-9.4.1.pom"
         }
@@ -33,7 +33,7 @@
       "candidates": [
         {
           "version": "2.4.21",
-          "published_last_modified": "2026-10-08T07:57:52+00:00",
+          "published_last_modified": "2026-10-08T13:27:52+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-gradle-plugin/2.4.21/kotlin-gradle-plugin-2.4.21.pom"
         }
@@ -48,7 +48,7 @@
       "candidates": [
         {
           "version": "2.3.12",
-          "published_last_modified": "2026-09-09T17:36:34+00:00",
+          "published_last_modified": "2026-09-09T23:06:34+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/com/google/devtools/ksp/symbol-processing-gradle-plugin/2.3.12/symbol-processing-gradle-plugin-2.3.12.pom"
         }
@@ -63,7 +63,7 @@
       "candidates": [
         {
           "version": "1.11.0",
-          "published_last_modified": "2026-05-07T14:02:59+00:00",
+          "published_last_modified": "2026-05-07T19:32:59+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-android/1.11.0/kotlinx-coroutines-android-1.11.0.pom"
         }
@@ -78,13 +78,13 @@
       "candidates": [
         {
           "version": "1.12.0",
-          "published_last_modified": "2026-10-19T18:21:43+00:00",
+          "published_last_modified": "2026-10-19T23:51:43+05:30",
           "eligible": false,
           "pom": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-json/1.12.0/kotlinx-serialization-json-1.12.0.pom"
         },
         {
           "version": "1.11.0",
-          "published_last_modified": "2026-04-09T17:47:50+00:00",
+          "published_last_modified": "2026-04-09T23:17:50+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-json/1.11.0/kotlinx-serialization-json-1.11.0.pom"
         }
@@ -99,7 +99,7 @@
       "candidates": [
         {
           "version": "2026.09.00",
-          "published_last_modified": "2026-09-09T17:10:57+00:00",
+          "published_last_modified": "2026-09-09T22:40:57+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/2026.09.00/compose-bom-2026.09.00.pom"
         }
@@ -114,7 +114,7 @@
       "candidates": [
         {
           "version": "1.13.0",
-          "published_last_modified": "2026-03-11T18:01:44+00:00",
+          "published_last_modified": "2026-03-11T23:31:44+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/activity/activity-compose/1.13.0/activity-compose-1.13.0.pom"
         }
@@ -129,7 +129,7 @@
       "candidates": [
         {
           "version": "1.19.1",
-          "published_last_modified": "2026-09-23T17:04:44+00:00",
+          "published_last_modified": "2026-09-23T22:34:44+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/1.19.1/core-ktx-1.19.1.pom"
         }
@@ -144,13 +144,13 @@
       "candidates": [
         {
           "version": "1.6.2",
-          "published_last_modified": "2026-08-26T17:07:19+00:00",
+          "published_last_modified": "2026-08-26T22:37:19+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-core/1.6.2/camera-core-1.6.2.pom"
         },
         {
           "version": "1.6.1",
-          "published_last_modified": "2026-05-06T17:02:43+00:00",
+          "published_last_modified": "2026-05-06T22:32:43+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-core/1.6.1/camera-core-1.6.1.pom"
         }
@@ -165,13 +165,13 @@
       "candidates": [
         {
           "version": "2.3.2",
-          "published_last_modified": "2026-10-26T20:45:09+00:00",
+          "published_last_modified": "2026-10-27T02:15:09+05:30",
           "eligible": false,
           "pom": "https://dl.google.com/dl/android/maven2/com/google/ai/edge/litert/litert/2.3.2/litert-2.3.2.pom"
         },
         {
           "version": "2.3.0",
-          "published_last_modified": "2026-10-06T22:09:21+00:00",
+          "published_last_modified": "2026-10-07T03:39:21+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/com/google/ai/edge/litert/litert/2.3.0/litert-2.3.0.pom"
         }
@@ -186,13 +186,13 @@
       "candidates": [
         {
           "version": "2.3.2",
-          "published_last_modified": "2026-10-26T20:45:09+00:00",
+          "published_last_modified": "2026-10-27T02:15:09+05:30",
           "eligible": false,
           "pom": "https://dl.google.com/dl/android/maven2/com/google/ai/edge/litert/litert-gpu/2.3.2/litert-gpu-2.3.2.pom"
         },
         {
           "version": "2.3.0",
-          "published_last_modified": "2026-10-06T22:09:21+00:00",
+          "published_last_modified": "2026-10-07T03:39:21+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/com/google/ai/edge/litert/litert-gpu/2.3.0/litert-gpu-2.3.0.pom"
         }
@@ -207,7 +207,7 @@
       "candidates": [
         {
           "version": "2.8.5",
-          "published_last_modified": "2026-09-09T17:12:08+00:00",
+          "published_last_modified": "2026-09-09T22:42:08+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/room/room-runtime/2.8.5/room-runtime-2.8.5.pom"
         }
@@ -222,13 +222,13 @@
       "candidates": [
         {
           "version": "4.20.0",
-          "published_last_modified": "2026-10-27T14:58:20+00:00",
+          "published_last_modified": "2026-10-27T20:28:20+05:30",
           "eligible": false,
           "pom": "https://repo.maven.apache.org/maven2/net/zetetic/sqlcipher-android/4.20.0/sqlcipher-android-4.20.0.pom"
         },
         {
           "version": "4.19.1",
-          "published_last_modified": "2026-09-29T18:41:41+00:00",
+          "published_last_modified": "2026-09-30T00:11:41+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/net/zetetic/sqlcipher-android/4.19.1/sqlcipher-android-4.19.1.pom"
         }
@@ -243,13 +243,13 @@
       "candidates": [
         {
           "version": "1.24.0",
-          "published_last_modified": "2026-10-16T13:14:42+00:00",
+          "published_last_modified": "2026-10-16T18:44:42+05:30",
           "eligible": false,
           "pom": "https://repo.maven.apache.org/maven2/com/google/crypto/tink/tink-android/1.24.0/tink-android-1.24.0.pom"
         },
         {
           "version": "1.23.0",
-          "published_last_modified": "2026-07-09T08:21:16+00:00",
+          "published_last_modified": "2026-07-09T13:51:16+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/com/google/crypto/tink/tink-android/1.23.0/tink-android-1.23.0.pom"
         }
@@ -264,7 +264,7 @@
       "candidates": [
         {
           "version": "1.3.0",
-          "published_last_modified": "2026-10-21T17:06:41+00:00",
+          "published_last_modified": "2026-10-21T22:36:41+05:30",
           "eligible": false,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore/1.3.0/datastore-1.3.0.pom"
         }
@@ -279,7 +279,7 @@
       "candidates": [
         {
           "version": "1.3.0",
-          "published_last_modified": "2026-10-21T17:06:41+00:00",
+          "published_last_modified": "2026-10-21T22:36:41+05:30",
           "eligible": false,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-tink/1.3.0/datastore-tink-1.3.0.pom"
         }
@@ -294,7 +294,7 @@
       "candidates": [
         {
           "version": "2.11.0",
-          "published_last_modified": "2026-06-17T17:07:08+00:00",
+          "published_last_modified": "2026-06-17T22:37:08+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-service/2.11.0/lifecycle-service-2.11.0.pom"
         }
@@ -309,7 +309,7 @@
       "candidates": [
         {
           "version": "2.12.0",
-          "published_last_modified": "2026-09-23T17:04:36+00:00",
+          "published_last_modified": "2026-09-23T22:34:36+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/work/work-runtime-ktx/2.12.0/work-runtime-ktx-2.12.0.pom"
         }
@@ -324,13 +324,13 @@
       "candidates": [
         {
           "version": "5.5.1",
-          "published_last_modified": "2026-10-22T02:47:15+00:00",
+          "published_last_modified": "2026-10-22T08:17:15+05:30",
           "eligible": false,
           "pom": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp/5.5.1/okhttp-5.5.1.pom"
         },
         {
           "version": "5.5.0",
-          "published_last_modified": "2026-08-16T16:12:45+00:00",
+          "published_last_modified": "2026-08-16T21:42:45+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp/5.5.0/okhttp-5.5.0.pom"
         }
@@ -345,7 +345,7 @@
       "candidates": [
         {
           "version": "2.60.1",
-          "published_last_modified": "2026-07-06T17:48:57+00:00",
+          "published_last_modified": "2026-07-06T23:18:57+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/com/google/dagger/hilt-android/2.60.1/hilt-android-2.60.1.pom"
         }
@@ -360,7 +360,7 @@
       "candidates": [
         {
           "version": "4.13.2",
-          "published_last_modified": "2021-02-13T16:31:54+00:00",
+          "published_last_modified": "2021-02-13T22:01:54+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/junit/junit/4.13.2/junit-4.13.2.pom"
         }
@@ -375,7 +375,7 @@
       "candidates": [
         {
           "version": "1.7.0",
-          "published_last_modified": "2025-07-30T23:08:41+00:00",
+          "published_last_modified": "2025-07-31T04:38:41+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/test/runner/1.7.0/runner-1.7.0.pom"
         }
@@ -390,7 +390,7 @@
       "candidates": [
         {
           "version": "1.3.0",
-          "published_last_modified": "2025-07-30T23:08:41+00:00",
+          "published_last_modified": "2025-07-31T04:38:41+05:30",
           "eligible": true,
           "pom": "https://dl.google.com/dl/android/maven2/androidx/test/ext/junit/1.3.0/junit-1.3.0.pom"
         }
@@ -405,7 +405,7 @@
       "candidates": [
         {
           "version": "4.36.2",
-          "published_last_modified": "2026-09-17T20:05:12+00:00",
+          "published_last_modified": "2026-09-18T01:35:12+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/com/google/protobuf/protobuf-javalite/4.36.2/protobuf-javalite-4.36.2.pom"
         }
@@ -420,7 +420,7 @@
       "candidates": [
         {
           "version": "0.10.0",
-          "published_last_modified": "2026-04-20T03:02:44+00:00",
+          "published_last_modified": "2026-04-20T08:32:44+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/com/google/protobuf/protobuf-gradle-plugin/0.10.0/protobuf-gradle-plugin-0.10.0.pom"
         }
@@ -435,15 +435,111 @@
       "candidates": [
         {
           "version": "0.8.16",
-          "published_last_modified": "2026-10-26T10:37:11+00:00",
+          "published_last_modified": "2026-10-26T16:07:11+05:30",
           "eligible": false,
           "pom": "https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.agent/0.8.16/org.jacoco.agent-0.8.16.pom"
         },
         {
           "version": "0.8.15",
-          "published_last_modified": "2026-06-04T20:32:55+00:00",
+          "published_last_modified": "2026-06-05T02:02:55+05:30",
           "eligible": true,
           "pom": "https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.agent/0.8.15/org.jacoco.agent-0.8.15.pom"
+        }
+      ]
+    },
+    {
+      "name": "lifecycle-viewmodel",
+      "coordinate": "androidx.lifecycle:lifecycle-viewmodel",
+      "selected": "2.11.0",
+      "exception": null,
+      "resolved_on": "2026-10-30",
+      "metadata": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel/maven-metadata.xml",
+      "candidates": [
+        {
+          "version": "2.11.0",
+          "published_last_modified": "2026-06-17T22:37:08+05:30",
+          "eligible": true,
+          "pom": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel/2.11.0/lifecycle-viewmodel-2.11.0.pom"
+        }
+      ]
+    },
+    {
+      "name": "ui-test-junit4",
+      "coordinate": "androidx.compose.ui:ui-test-junit4",
+      "selected": "1.12.1",
+      "exception": null,
+      "resolved_on": "2026-10-30",
+      "metadata": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-test-junit4/maven-metadata.xml",
+      "candidates": [
+        {
+          "version": "1.12.1",
+          "published_last_modified": "2026-09-09T22:40:57+05:30",
+          "eligible": true,
+          "pom": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-test-junit4/1.12.1/ui-test-junit4-1.12.1.pom"
+        }
+      ]
+    },
+    {
+      "name": "ui-test-manifest",
+      "coordinate": "androidx.compose.ui:ui-test-manifest",
+      "selected": "1.12.1",
+      "exception": null,
+      "resolved_on": "2026-10-30",
+      "metadata": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-test-manifest/maven-metadata.xml",
+      "candidates": [
+        {
+          "version": "1.12.1",
+          "published_last_modified": "2026-09-09T22:40:57+05:30",
+          "eligible": true,
+          "pom": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-test-manifest/1.12.1/ui-test-manifest-1.12.1.pom"
+        }
+      ]
+    },
+    {
+      "name": "camera-camera2",
+      "coordinate": "androidx.camera:camera-camera2",
+      "selected": "1.6.1",
+      "exception": "Explicit user pin CameraX 1.6.1",
+      "resolved_on": "2026-10-30",
+      "metadata": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-camera2/maven-metadata.xml",
+      "candidates": [
+        {
+          "version": "1.6.1",
+          "published_last_modified": "2026-05-06T17:02:43.0000000+00:00",
+          "eligible": true,
+          "pom": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-camera2/1.6.1/camera-camera2-1.6.1.pom"
+        }
+      ]
+    },
+    {
+      "name": "camera-lifecycle",
+      "coordinate": "androidx.camera:camera-lifecycle",
+      "selected": "1.6.1",
+      "exception": "Explicit user pin CameraX 1.6.1",
+      "resolved_on": "2026-10-30",
+      "metadata": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-lifecycle/maven-metadata.xml",
+      "candidates": [
+        {
+          "version": "1.6.1",
+          "published_last_modified": "2026-05-06T17:02:43.0000000+00:00",
+          "eligible": true,
+          "pom": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-lifecycle/1.6.1/camera-lifecycle-1.6.1.pom"
+        }
+      ]
+    },
+    {
+      "name": "camera-view",
+      "coordinate": "androidx.camera:camera-view",
+      "selected": "1.6.1",
+      "exception": "Explicit user pin CameraX 1.6.1",
+      "resolved_on": "2026-10-30",
+      "metadata": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-view/maven-metadata.xml",
+      "candidates": [
+        {
+          "version": "1.6.1",
+          "published_last_modified": "2026-05-06T17:02:43.0000000+00:00",
+          "eligible": true,
+          "pom": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-view/1.6.1/camera-view-1.6.1.pom"
         }
       ]
     }

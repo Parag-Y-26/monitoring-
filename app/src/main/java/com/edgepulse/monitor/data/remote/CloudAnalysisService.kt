@@ -3,6 +3,10 @@ package com.edgepulse.monitor.data.remote
 import android.os.SystemClock
 import com.edgepulse.core.cloud.*
 import com.edgepulse.monitor.security.SecureSettingsStore
+import com.edgepulse.monitor.security.ApiUsageRepository
+import com.edgepulse.core.audit.AuditCanonical
+import java.util.Base64
+import kotlinx.coroutines.NonCancellable
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -14,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.*
 import okhttp3.Call
 import okhttp3.Callback
@@ -29,11 +34,95 @@ import okhttp3.Response
 class CloudAnalysisService @Inject constructor(
     private val settings: SecureSettingsStore,
     private val interlock: MonitoringNetworkInterlock,
+    private val usage: ApiUsageRepository,
 ) {
+    suspend fun fetchModels(provider: CloudProvider, key: ByteArray, approval: OneShotUploadConsent): ModelDiscovery = withContext(Dispatchers.IO) {
+        requireKey(key)
+        withConfirmedClient(approval, ProviderDefaults.discoveryContext(provider)) { client ->
+            withTimeout(60_000) {
+                ModelDirectory.load(provider) { endpoint ->
+                    val profile = ProviderDefaults.profile(provider)
+                    require(endpoint.substringBefore('?') in setOf(profile.modelsEndpoint, profile.validationEndpoint))
+                    val builder = Request.Builder().url(endpoint).get()
+                    authorize(builder, provider, key)
+                    try {
+                        recordedRequest(client.newCall(builder.build()), 8 * 1024 * 1024, provider, "MODEL_CATALOG", "", 0)
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: IOException) { throw CatalogException(KeyValidationStatus.NETWORK_ERROR) }
+                }
+            }
+        }
+    }
+
     suspend fun validateKey(setup: ProviderSetup, key: ByteArray, approval: OneShotUploadConsent): KeyValidationStatus = withContext(Dispatchers.IO) {
         setup.validate()
-        require(key.size in 1..4096 && key.all { it.toInt() in 33..126 })
-        interlock.withConfirmedUpload(approval, setup.consentContext(), SystemClock::elapsedRealtime) {
+        require(setup.validationEndpoint == ProviderDefaults.profile(setup.provider).validationEndpoint)
+        requireKey(key)
+        withConfirmedClient(approval, setup.consentContext()) { client ->
+            try {
+                val response = recordedRequest(client.newCall(request(setup, key)), 1_048_576, setup.provider, "KEY_OR_MODEL_CHECK", setup.model, 0)
+                ProviderResponseValidator.validate(setup.provider, response.statusCode, response.body)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: IOException) { KeyValidationStatus.NETWORK_ERROR }
+        }
+    }
+
+    suspend fun describeItem(setup: ProviderSetup, key: ByteArray, approvedJpeg: ByteArray, approval: OneShotUploadConsent): ItemCharacteristics = withContext(Dispatchers.IO) {
+        setup.validate(); requireKey(key)
+        require(ProviderDefaults.isOfficialOrigin(setup.provider, setup.validationEndpoint))
+        require(approvedJpeg.size in 1..1_000_000 && setup.model.isNotBlank())
+        withConfirmedClient(approval, photoConsentContext(setup, approvedJpeg)) { client ->
+            val prompt = "Describe only the single inventory object in this reference photo: visible shape, colors, texture and distinctive markings. Do not infer identity of people or hidden attributes. Return only JSON with string fields name and characteristics. These descriptions do not train an object detector."
+            val encoded = Base64.getEncoder().encodeToString(approvedJpeg)
+            val body: JsonObject
+            val endpoint: String
+            if (setup.provider == CloudProvider.GEMINI) {
+                endpoint = ProviderDefaults.profile(setup.provider).modelsEndpoint.toHttpUrl().newBuilder()
+                    .addPathSegment(setup.model.removePrefix("models/") + ":generateContent").build().toString()
+                body = buildJsonObject {
+                    putJsonArray("contents") { addJsonObject { putJsonArray("parts") {
+                        addJsonObject { put("text", prompt) }
+                        addJsonObject { putJsonObject("inlineData") { put("mimeType", "image/jpeg"); put("data", encoded) } }
+                    } } }
+                    putJsonObject("generationConfig") { put("responseMimeType", "application/json"); put("maxOutputTokens", 1000) }
+                }
+            } else {
+                endpoint = if (setup.provider == CloudProvider.NVIDIA_NIM) ProviderDefaults.profile(setup.provider).validationEndpoint
+                    else ProviderDefaults.profile(setup.provider).modelsEndpoint.toHttpUrl().newBuilder().encodedPath("/api/v1/chat/completions").build().toString()
+                body = buildJsonObject {
+                    put("model", setup.model); put("max_tokens", 1000); put("stream", false)
+                    putJsonArray("messages") { addJsonObject { put("role", "user"); putJsonArray("content") {
+                        addJsonObject { put("type", "text"); put("text", prompt) }
+                        addJsonObject { put("type", "image_url"); putJsonObject("image_url") { put("url", "data:image/jpeg;base64,$encoded") } }
+                    } } }
+                }
+            }
+            val builder = Request.Builder().url(endpoint).post(body.toString().toRequestBody("application/json".toMediaType()))
+            authorize(builder, setup.provider, key)
+            val response = recordedRequest(client.newCall(builder.build()), 1_048_576, setup.provider, "ITEM_PHOTO_DESCRIPTION", setup.model, 1)
+            if (response.statusCode != 200) throw CatalogException(ProviderResponseValidator.validate(setup.provider, response.statusCode, response.body))
+            try { CharacteristicsParser.parse(setup.provider, response.body) }
+            catch (_: Exception) { throw CatalogException(KeyValidationStatus.UNEXPECTED_RESPONSE) }
+        }
+    }
+
+    private suspend fun recordedRequest(call: Call, limit: Int, provider: CloudProvider, purpose: String, model: String, images: Int): CloudResponse {
+        var response: CloudResponse? = null
+        var outcome = "NETWORK_ERROR_OR_CANCELLED"
+        try {
+            response = readResponse(call, limit)
+            outcome = "HTTP_${response.statusCode}"
+            return response
+        } finally { withContext(NonCancellable) { usage.record(provider, purpose, model, images, response, outcome) } }
+    }
+
+    companion object {
+        fun photoConsentContext(setup: ProviderSetup, approvedJpeg: ByteArray): String =
+            "EdgePulse/item-photo/v1/" + setup.consentContext() + "/" + AuditCanonical.hex(AuditCanonical.hash(approvedJpeg))
+    }
+
+    private suspend fun <T> withConfirmedClient(approval: OneShotUploadConsent, context: String, block: suspend (OkHttpClient) -> T): T =
+        interlock.withConfirmedUpload(approval, context, SystemClock::elapsedRealtime) {
             // Also reject stale active flags after process death, before constructing a client.
             if (settings.dataStore.data.first().activeSessionId != null) throw MonitoringActiveException()
             val client = OkHttpClient.Builder()
@@ -41,29 +130,36 @@ class CloudAnalysisService @Inject constructor(
                 .connectTimeout(10, TimeUnit.SECONDS).readTimeout(15, TimeUnit.SECONDS)
                 .callTimeout(20, TimeUnit.SECONDS).build()
             try {
-                val request = request(setup, key)
-                await(client.newCall(request)).use { response ->
-                    if (response.code != 200) return@withConfirmedUpload ProviderResponseValidator.validate(setup.provider, response.code, "")
-                    if (response.body.contentLength() > 1_048_576L) return@withConfirmedUpload KeyValidationStatus.UNEXPECTED_RESPONSE
-                    val output = ByteArrayOutputStream()
-                    val scratch = ByteArray(4096)
-                    response.body.byteStream().use { input ->
-                        while (true) {
-                            val length = input.read(scratch)
-                            if (length < 0) break
-                            if (output.size() + length > 1_048_576) return@withConfirmedUpload KeyValidationStatus.UNEXPECTED_RESPONSE
-                            output.write(scratch, 0, length)
-                        }
-                    }
-                    ProviderResponseValidator.validate(setup.provider, response.code, output.toString(Charsets.UTF_8.name()))
-                }
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: IOException) { KeyValidationStatus.NETWORK_ERROR }
+                block(client)
+            }
             finally {
+                client.dispatcher.cancelAll()
                 client.connectionPool.evictAll()
                 client.dispatcher.executorService.shutdown()
             }
         }
+
+    private fun requireKey(key: ByteArray) = require(key.size in 1..4096 && key.all { it.toInt() in 33..126 })
+
+    private fun authorize(builder: Request.Builder, provider: CloudProvider, key: ByteArray) {
+        val credential = key.toString(Charsets.US_ASCII)
+        if (provider == CloudProvider.GEMINI) builder.header("x-goog-api-key", credential)
+        else builder.header("Authorization", "Bearer $credential")
+    }
+
+    private fun body(response: Response, limit: Int): String {
+        if (response.body.contentLength() > limit) throw IOException("Provider response exceeded metadata limit")
+        val output = ByteArrayOutputStream()
+        val scratch = ByteArray(16 * 1024)
+        response.body.byteStream().use { input ->
+            while (true) {
+                val count = input.read(scratch)
+                if (count < 0) break
+                if (output.size() + count > limit) throw IOException("Provider response exceeded metadata limit")
+                output.write(scratch, 0, count)
+            }
+        }
+        return output.toString(Charsets.UTF_8.name())
     }
 
     private fun request(setup: ProviderSetup, key: ByteArray): Request {
@@ -91,14 +187,21 @@ class CloudAnalysisService @Inject constructor(
         return builder.build()
     }
 
-    private suspend fun await(call: Call): Response = suspendCancellableCoroutine { continuation ->
+    private suspend fun readResponse(call: Call, limit: Int): CloudResponse = suspendCancellableCoroutine { continuation ->
         continuation.invokeOnCancellation { call.cancel() }
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 if (!continuation.isCancelled) continuation.resumeWithException(e)
             }
             override fun onResponse(call: Call, response: Response) {
-                continuation.resume(response) { _, value, _ -> value.close() }
+                response.use {
+                    try {
+                        val result = CloudResponse(response.code, body(response, limit))
+                        continuation.resume(result) { _, _, _ -> }
+                    } catch (failure: Exception) {
+                        if (!continuation.isCancelled) continuation.resumeWithException(failure)
+                    }
+                }
             }
         })
     }

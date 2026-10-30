@@ -4,6 +4,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PreviewProjectionTest {
+    @Test fun `caption stays below status island and above floating controls`() {
+        val underStatus = previewCaptionBaseline(206f,22f,1136f,208f,750f)
+        assertTrue(underStatus-22f-4f >= 208f)
+        val underControls = previewCaptionBaseline(900f,22f,1136f,208f,750f)
+        assertTrue(underControls+4f <= 750f)
+        assertEquals(400f,previewCaptionBaseline(400f,22f,1136f,208f,750f),.001f)
+        assertTrue(previewCaptionBaseline(100f,22f,360f,300f,320f).isNaN())
+    }
     @Test fun `portrait crop fills view and maps the source center without stretching`() {
         val p = PreviewProjection().apply { configure(480, 640, 360f, 800f) }
         assertEquals(-120f, p.x(0f), .001f)

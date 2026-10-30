@@ -18,6 +18,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.edgepulse.core.cloud.*
 import com.edgepulse.monitor.security.ProviderConnection
 import com.edgepulse.monitor.monitoring.MonitoringState
+import com.edgepulse.monitor.monitoring.DetectionOverlay
+import com.edgepulse.core.vision.DetectionBuffer
 import com.edgepulse.monitor.vision.ml.BenchmarkReport
 import com.edgepulse.monitor.ui.*
 import com.edgepulse.monitor.ui.auth.CloudSetupActions
@@ -54,6 +56,9 @@ class DesignReviewInstrumentedTest {
         var review by mutableStateOf(Review("monitor-dark"))
         var paused by mutableStateOf(false)
         var live by mutableStateOf(false)
+        val overlay = DetectionOverlay().apply {
+            copyFrom(DetectionBuffer(1).apply { add(.25f,.2f,.75f,.8f,.95f,0) },480,640)
+        }
         val setup = SetupUiState(storageReady = true, identityReady = true, folderName = "Local reports",
             connections = listOf(ProviderConnection(CloudProvider.GEMINI, "fixture/model", emptyList(), 1)),
             benchmark = BenchmarkReport("fixture", "fixture", "fixture", emptyList(), "fixture", 30.0, true, true, 5))
@@ -63,7 +68,8 @@ class DesignReviewInstrumentedTest {
                     Box(Modifier.requiredSize(review.width.dp, review.height.dp).testTag("design-root")) {
                         EdgeAppShell(if (review.name == "usage-empty") EdgeDestination.USAGE else EdgeDestination.MONITOR, {}, immersive = live && review.name != "usage-empty") {
                             if (review.name == "usage-empty") ApiUsageScreen(emptyList(), {}, embedded = true)
-                            else MonitoringScreen(setup, MonitoringState(active = live, paused = paused), {}, {}, {}, {})
+                            else MonitoringScreen(setup, MonitoringState(active = live, paused = paused, burst = live && !paused,
+                                visibleItems = if (live && !paused) 1 else 0), {}, {}, {}, {}, overlay = overlay, labels = listOf("Fixture object"))
                         }
                     }
                 }
@@ -179,7 +185,9 @@ class DesignReviewInstrumentedTest {
 
     private fun capture(name: String) {
         compose.waitForIdle()
-        val directory = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "design-review")
+        val root = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")?.let(::File)
+            ?: InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null)
+        val directory = File(root, "design-review")
         check(directory.mkdirs() || directory.isDirectory)
         File(directory, "$name.png").outputStream().use {
             check(compose.onNodeWithTag("design-root").captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it))

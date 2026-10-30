@@ -16,6 +16,7 @@ android {
         versionCode = 7
         versionName = "0.6.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["additionalTestOutputDir"] = "/sdcard/Android/media/com.edgepulse.monitor/drishti-test-output"
     }
     buildFeatures { compose = true; buildConfig = true }
     defaultConfig { buildConfigField("String", "LITERT_VERSION", "\"${libs.versions.litert.get()}\"") }
@@ -25,6 +26,21 @@ android {
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    providers.gradleProperty("drishtiTestAssets").orNull?.let {
+        sourceSets.getByName("androidTest").assets.srcDir(it)
+    }
+    testOptions {
+        managedDevices {
+            localDevices {
+                create("drishtiApi36") {
+                    device = "Pixel 2"
+                    apiLevel = 36
+                    testedAbi = "x86_64"
+                    systemImageSource = "aosp"
+                }
+            }
+        }
+    }
 }
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 configurations.configureEach {
